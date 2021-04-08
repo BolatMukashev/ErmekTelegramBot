@@ -200,4 +200,9 @@ def add_base_titles_from_the_first_page_in_list(table_id: str, list_name: str):
     update_data_in_table(table_id, list_name, 'A1', [titles])
 
 
-print(get_products_names_by_type('Тесто'))
+def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
+    """Добавить заголовки из первой страицы во все страницы"""
+    list_names = get_lists_names_in_table(table_id)
+    titles = get_spreadsheet_titles(table_id, list_names[0])
+    for user_list in list_names:
+        update_data_in_table(table_id, user_list, 'A1', [titles])
