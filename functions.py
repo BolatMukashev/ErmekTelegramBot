@@ -21,7 +21,7 @@ def get_data_in_message_form(table_data: list):
 
 
 def get_table_range(table_id: str, list_name: str, position: str = 'ROWS'):
-    """Чтение из таблицы"""
+    """Получить количество строк в листе таблицы"""
     values = service.spreadsheets().values().get(
         spreadsheetId=table_id,
         range=f'{list_name}!A1:Z10000',
@@ -63,20 +63,21 @@ def append_data_in_table(table_id: str, list_name: str, user_value: list, positi
     ).execute()
 
 
-def get_trusted_id():
+def get_trusted_id() -> list:
     """Получить TelegramID всех сотрудников"""
     all_id = get_table_data(config.EMPLOYEES_LIST, range1='C2', range2='C10000', position='COLUMNS')
     all_id = [int(x) for x in all_id[0]]
     return all_id
 
 
-def check_id(telegram_id: int, all_id: list):
+def check_id(telegram_id: int):
     """Проверить есть ли этот ID в списке"""
+    all_id = get_trusted_id()
     if telegram_id in all_id:
         return True
 
 
-def get_lists_names_in_table(table_id: str):
+def get_lists_names_in_table(table_id: str) -> list:
     """Получить названия листов в таблице"""
     sheet_metadata = service.spreadsheets().get(spreadsheetId=table_id).execute()
     sheets = sheet_metadata.get('sheets', '')
@@ -126,7 +127,7 @@ def get_shop_by_name_and_district(shop_name: str, district: str):
 def get_all_employees():
     """Получить данные о всех сотрудниках в "json" формате"""
     titles = get_spreadsheet_titles(config.EMPLOYEES_LIST)
-    data = get_table_data(config.EMPLOYEES_LIST, 'A2', 'Z10000')
+    data = get_table_data(config.EMPLOYEES_LIST, 'A2', 'D10000')
     formatted_data = []
     for rows in data:
         res = {titles[idd]: value for idd, value in enumerate(rows)}
@@ -136,11 +137,19 @@ def get_all_employees():
 
 def get_employee_by_id(telegram_id: int):
     """Получить данные о сотруднике по Telegram ID"""
-    if check_id(telegram_id, get_trusted_id()):
+    if check_id(telegram_id):
         all_employees = get_all_employees()
         for employee in all_employees:
             if str(telegram_id) == employee['Telegram ID']:
                 return employee
+
+
+def get_the_shops_available_to_the_employee(telegram_id: int) -> list:
+    """Получить список доступных сотруднику магазинов"""
+    user = get_employee_by_id(telegram_id)
+    available_shops = user['Доступные маршруты'].split(',')
+    available_shops = [x.strip() for x in available_shops]
+    return available_shops
 
 
 def get_all_products():
@@ -206,3 +215,4 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
     titles = get_spreadsheet_titles(table_id, list_names[0])
     for user_list in list_names:
         update_data_in_table(table_id, user_list, 'A1', [titles])
+
