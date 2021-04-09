@@ -98,10 +98,10 @@ def get_districts():
     return data
 
 
-def get_all_shops():
-    """Получить данные о всех магазинах в "json" формате"""
-    titles = get_spreadsheet_titles(config.SHOPS)
-    data = get_table_data(config.SHOPS, 'A2', 'Z10000')
+def get_all_shops_in_district(district: str):
+    """Получить данные о магазинах в выбранном районе в "json" формате"""
+    titles = get_spreadsheet_titles(config.SHOPS, list_name=district)
+    data = get_table_data(config.SHOPS, 'A2', 'Z10000', list_name=district)
     formatted_data = []
     for rows in data:
         res = {titles[idd]: value for idd, value in enumerate(rows)}
@@ -109,18 +109,17 @@ def get_all_shops():
     return formatted_data
 
 
-def get_all_shops_name_in_district(district: str):
+def get_shops_name_in_district(district: str) -> list:
     """Получить названия всех магазинов в районе"""
-    data = get_all_shops()
-    data = [x['Название'] for x in data if x['Район'] == district]
-    return data
+    shops = get_table_data(config.SHOPS, 'A2', 'A10000', list_name=district, position='COLUMNS')[0]
+    return shops
 
 
 def get_shop_by_name_and_district(shop_name: str, district: str):
     """Получить данные магазина по имени и району"""
-    data = get_all_shops()
+    data = get_all_shops_in_district(district)
     for shop in data:
-        if shop_name == shop['Название'] and district == shop['Район']:
+        if shop_name == shop['Название']:
             return shop
 
 
@@ -144,12 +143,12 @@ def get_employee_by_id(telegram_id: int):
                 return employee
 
 
-def get_the_shops_available_to_the_employee(telegram_id: int) -> list:
-    """Получить список доступных сотруднику магазинов"""
+def get_the_districts_available_to_the_employee(telegram_id: int) -> list:
+    """Получить список доступных сотруднику районов"""
     user = get_employee_by_id(telegram_id)
-    available_shops = user['Доступные маршруты'].split(',')
-    available_shops = [x.strip() for x in available_shops]
-    return available_shops
+    available_districts = user['Доступные маршруты'].split(',')
+    available_districts = [x.strip() for x in available_districts]
+    return available_districts
 
 
 def get_all_products():
@@ -216,3 +215,5 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
     for user_list in list_names:
         update_data_in_table(table_id, user_list, 'A1', [titles])
 
+
+print(get_shop_by_name_and_district('Р-к байтерек бутик№24', '6 мкр'))

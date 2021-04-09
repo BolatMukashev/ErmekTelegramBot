@@ -12,8 +12,9 @@ bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
 
-class AllStates(StatesGroup):
-    MessageForAll: State = State()
+class Request(StatesGroup):
+    District: State = State()
+    ShopName: State = State()
 
 
 # Авторизуемся и получаем service — экземпляр доступа к API
