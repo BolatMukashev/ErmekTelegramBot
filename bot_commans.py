@@ -54,8 +54,44 @@ async def command_request_action_one(message: types.Message, state: FSMContext):
 async def command_request_action_two(message: types.Message, state: FSMContext):
     shop_name = message.text
     await state.update_data(shop_name=shop_name)
+    products_types = get_products_types()
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    for product_type in products_types:
+        button = types.KeyboardButton(product_type)
+        markup.add(button)
+    await message.answer(f'Выбери категорию товара: ', reply_markup=markup)
+    await Request.next()
+
+
+@dp.message_handler(state=Request.ProductCategory, content_types=types.ContentTypes.TEXT)
+async def command_request_action_three(message: types.Message, state: FSMContext):
+    product_category = message.text
+    await state.update_data(product_category=product_category)
+    products_names = get_products_names_by_type(product_category)
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    for product in products_names:
+        button = types.KeyboardButton(product)
+        markup.add(button)
+    await message.answer(f'Выбери товар: ', reply_markup=markup)
+    await Request.next()
+
+
+@dp.message_handler(state=Request.Product, content_types=types.ContentTypes.TEXT)
+async def command_request_action_four(message: types.Message, state: FSMContext):
+    product = message.text
+    await state.update_data(product=product)
+    await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
+    await Request.next()
+
+
+@dp.message_handler(state=Request.Number, content_types=types.ContentTypes.TEXT)
+async def command_request_action_five(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    employee = get_employee_by_id(telegram_id)
     data = await state.get_data()
-    district = data['district']
-    shop = data['shop_name']
-    await message.answer(f'Выбрано:\nрайон - {district},\nмагазин - {shop}', reply_markup=types.ReplyKeyboardRemove())
+    shop = get_shop_by_name_and_district(data['shop_name'], data['district'])
+    product = get_product_by_name(data['product'])
+    product['Количество'] = message.text
+    await state.update_data(product=product)
+    await message.answer(f'Итого:\n{employee}\n{shop}\n{product}')
     await state.finish()

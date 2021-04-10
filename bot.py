@@ -15,6 +15,9 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 class Request(StatesGroup):
     District: State = State()
     ShopName: State = State()
+    ProductCategory = State()
+    Product = State()
+    Number = State()
 
 
 # Авторизуемся и получаем service — экземпляр доступа к API

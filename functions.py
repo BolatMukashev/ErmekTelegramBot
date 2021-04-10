@@ -168,7 +168,7 @@ def get_products_types():
     all_products = get_all_products()
     result = []
     for product in all_products:
-        result.append(product['Вид'])
+        result.append(product['Категория товара'])
     result = sorted(list(set(result)))
     return result
 
@@ -178,7 +178,7 @@ def get_products_names_by_type(product_type):
     all_products = get_all_products()
     result = []
     for product in all_products:
-        if product['Вид'] == product_type and product['Наличие'] == 'Да':
+        if product['Категория товара'] == product_type and product['Наличие'] == 'Да':
             result.append(product['Номенклатура'])
     return result
 
@@ -215,5 +215,3 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
     for user_list in list_names:
         update_data_in_table(table_id, user_list, 'A1', [titles])
 
-
-print(get_shop_by_name_and_district('Р-к байтерек бутик№24', '6 мкр'))
