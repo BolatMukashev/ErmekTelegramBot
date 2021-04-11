@@ -220,7 +220,7 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
 
 
 def create_new_json_file(telegram_id: Union[str, int], order_data: dict):
-    """Создаем файл заказа, basic_structure = {'employee': {}, 'shop': {}, 'orders': []}"""
+    """Создаем файл заказа, basic_structure = {'employee': {}, 'shop': {}, 'orders': [], 'total_sum' : 0}"""
     path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
     with open(path, 'w', encoding='utf-8') as json_file:
         json.dump(order_data, json_file, ensure_ascii=False, default=str)

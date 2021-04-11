@@ -94,7 +94,7 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
     product['Количество'] = int(message.text)
     product['Сумма'] = product['Цена'] * product['Количество']
     await state.update_data(product=product)
-    order_data = {'employee': employee, 'shop': shop, 'orders': [product]}
+    order_data = {'employee': employee, 'shop': shop, 'orders': [product], 'total_sum': product['Сумма']}
     create_new_json_file(str(telegram_id), order_data)
     shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'], shop['Телефон'],
                  shop['Кассовый аппарат']]
@@ -102,6 +102,7 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
     order_data = ['Заявка:', product['Номенклатура'], f'Количество: {product["Количество"]}',
                   f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
     await message.answer('\n'.join(order_data))
+    await message.answer(f'Общая сумма: {int(product["Сумма"])} тг')
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     button1 = types.KeyboardButton('Добавить товар')
     button2 = types.KeyboardButton('Завершить 📄')
@@ -152,14 +153,23 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
     telegram_id = message.from_user.id
     data = await state.get_data()
     product = get_product_by_name(data['product'])
-    product['Количество'] = message.text
+    product['Количество'] = int(message.text)
+    product['Сумма'] = product['Цена'] * product['Количество']
     await state.update_data(product=product)
     order_data = get_data_from_json_file(telegram_id)
     order_data['orders'].append(product)
+    order_data['total_sum'] += product['Сумма']
     edit_data_in_json_file(telegram_id, order_data)
     shop = order_data["shop"]
     orders = order_data["orders"]
-    await message.answer(f'Итого:\n{shop}\n{orders}')
+    shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'], shop['Телефон'],
+                 shop['Кассовый аппарат']]
+    await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
+    for product in orders:
+        product_data = ['Заявка:', product['Номенклатура'], f'Количество: {product["Количество"]}',
+                        f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
+        await message.answer('\n'.join(product_data))
+    await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     button1 = types.KeyboardButton('Добавить товар')
     button2 = types.KeyboardButton('Завершить 📄')
