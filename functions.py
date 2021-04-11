@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import config
 from bot import service
+import os
+import json
+from typing import Union
 
 
 def get_table_data(table_id: str, range1: str, range2: str, list_name: str = 'Лист1', position: str = 'ROWS'):
@@ -119,7 +122,7 @@ def get_shop_by_name_and_district(shop_name: str, district: str):
     """Получить данные магазина по имени и району"""
     data = get_all_shops_in_district(district)
     for shop in data:
-        if shop_name == shop['Название']:
+        if shop_name.strip() == shop['Название'].strip():
             return shop
 
 
@@ -214,4 +217,26 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
     titles = get_spreadsheet_titles(table_id, list_names[0])
     for user_list in list_names:
         update_data_in_table(table_id, user_list, 'A1', [titles])
+
+
+def create_new_json_file(telegram_id: Union[str, int], order_data: dict):
+    """Создаем файл заказа, basic_structure = {'employee': {}, 'shop': {}, 'orders': []}"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'w', encoding='utf-8') as json_file:
+        json.dump(order_data, json_file, ensure_ascii=False, default=str)
+
+
+def get_data_from_json_file(telegram_id: Union[str, int]) -> dict:
+    """Получить данные из json файла"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'r', encoding='utf-8') as json_file:
+        data = json.load(json_file)
+        return data
+
+
+def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
+    """Изменить данные в json файле"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'w', encoding='utf-8') as json_file:
+        json.dump(new_data, json_file, ensure_ascii=False)
 

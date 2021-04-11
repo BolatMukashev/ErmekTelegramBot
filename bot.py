@@ -20,6 +20,12 @@ class Request(StatesGroup):
     Number = State()
 
 
+class RequestAdd(StatesGroup):
+    ProductCategory = State()
+    Product = State()
+    Number = State()
+
+
 # Авторизуемся и получаем service — экземпляр доступа к API
 credentials = ServiceAccountCredentials.from_json_keyfile_name(
     config.CREDENTIALS_FILE_NAME,
