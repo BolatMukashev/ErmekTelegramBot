@@ -240,3 +240,27 @@ def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
     with open(path, 'w', encoding='utf-8') as json_file:
         json.dump(new_data, json_file, ensure_ascii=False)
 
+
+def get_product_index_by_name_in_data(product_name: str, data: dict):
+    """Получить индекс продукта"""
+    for idd, product in enumerate(data['orders']):
+        if product['Номенклатура'] == product_name:
+            return idd
+
+
+def get_shop_data_from_data(data: dict) -> list:
+    """Получить данные магазниа"""
+    shop = data["shop"]
+    shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'], shop['Телефон'], shop['Кассовый аппарат']]
+    return shop_data
+
+
+def get_product_data_from_data(data: dict) -> list:
+    """Получить данные продуктов (список списков)"""
+    orders = data["orders"]
+    products_list = []
+    for product in orders:
+        product_data = ['Заявка:', product['Номенклатура'], f'Количество: {product["Количество"]}',
+                        f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
+        products_list.append(product_data)
+    return products_list
