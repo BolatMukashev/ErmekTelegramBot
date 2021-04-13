@@ -112,7 +112,7 @@ def get_all_shops_in_district(district: str):
     return formatted_data
 
 
-def get_shops_name_in_district(district: str) -> list:
+def get_shops_name_by_district(district: str) -> list:
     """Получить названия всех магазинов в районе"""
     shops = get_table_data(config.SHOPS, 'A2', 'A10000', list_name=district, position='COLUMNS')[0]
     return shops
@@ -251,7 +251,8 @@ def get_product_index_by_name_in_data(product_name: str, data: dict):
 def get_shop_data_from_data(data: dict) -> list:
     """Получить данные магазниа"""
     shop = data["shop"]
-    shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'], shop['Телефон'], shop['Кассовый аппарат']]
+    shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'],
+                 f'Тел.: {shop["Телефон"]}', f'Кассовый аппарат: {shop["Кассовый аппарат"]}']
     return shop_data
 
 

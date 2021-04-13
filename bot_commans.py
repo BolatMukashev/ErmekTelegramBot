@@ -3,6 +3,7 @@ from functions import *
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from keyboards.next_chioce import next_choice_buttons
+from keyboards.generated_keyboard import create_keyboard
 
 
 @dp.message_handler(commands="set_commands", state="*")
@@ -29,11 +30,8 @@ async def command_request(message: types.Message):
     telegram_id = message.from_user.id
     if check_id(telegram_id):
         available_districts = get_the_districts_available_to_the_employee(telegram_id)
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        for el in available_districts:
-            button = types.KeyboardButton(el)
-            markup.add(button)
-        await message.answer(f'Выбери район', reply_markup=markup)
+        districts_keyboard = create_keyboard(available_districts)
+        await message.answer(f'Выбери район', reply_markup=districts_keyboard)
         await Request.District.set()
 
 
@@ -44,14 +42,9 @@ async def command_request_action_one(message: types.Message, state: FSMContext):
     available_districts = get_the_districts_available_to_the_employee(telegram_id)
     if district in available_districts:
         await state.update_data(district=district)
-        data = await state.get_data()
-        district = data['district']
-        shops = get_shops_name_in_district(district)
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        for el in shops:
-            button = types.KeyboardButton(el)
-            markup.add(button)
-        await message.answer(f'Выбери название торговой точки:', reply_markup=markup)
+        shops = get_shops_name_by_district(district)
+        shops_keyboard = create_keyboard(shops)
+        await message.answer(f'Выбери название торговой точки:', reply_markup=shops_keyboard)
         await Request.next()
     else:
         await message.answer(f'Выбери район из предложенных вариантов или обратись в офис')
@@ -62,15 +55,12 @@ async def command_request_action_two(message: types.Message, state: FSMContext):
     shop_name = message.text
     data = await state.get_data()
     district = data['district']
-    shops = get_shops_name_in_district(district)
+    shops = get_shops_name_by_district(district)
     if shop_name in shops:
         await state.update_data(shop_name=shop_name)
         products_types = get_products_types()
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        for product_type in products_types:
-            button = types.KeyboardButton(product_type)
-            markup.add(button)
-        await message.answer(f'Выбери категорию товара: ', reply_markup=markup)
+        products_types_keyboard = create_keyboard(products_types)
+        await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
         await Request.next()
     else:
         await message.answer('Выберите магазин из предложенных.\n'
@@ -84,11 +74,8 @@ async def command_request_action_three(message: types.Message, state: FSMContext
     if product_category in products_types:
         await state.update_data(product_category=product_category)
         products_names = get_products_names_by_type(product_category)
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        for product in products_names:
-            button = types.KeyboardButton(product)
-            markup.add(button)
-        await message.answer(f'Выбери товар: ', reply_markup=markup)
+        products_names_keyboards = create_keyboard(products_names)
+        await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboards)
         await Request.next()
     else:
         await message.answer('Выберите из предложенных, или обратитесь в офис')
@@ -122,13 +109,12 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
         await state.update_data(product=product)
         order_data = {'employee': employee, 'shop': shop, 'orders': [product], 'total_sum': product['Сумма']}
         create_new_json_file(str(telegram_id), order_data)
-        shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'], shop['Телефон'],
-                     shop['Кассовый аппарат']]
+        shop_data = get_shop_data_from_data(order_data)
         await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
-        order_data = ['Заявка:', product['Номенклатура'], f'Количество: {product["Количество"]}',
-                      f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
-        await message.answer('\n'.join(order_data))
-        await message.answer(f'Общая сумма: {int(product["Сумма"])} тг')
+        product_data = get_product_data_from_data(order_data)
+        for product in product_data:
+            await message.answer('\n'.join(product))
+        await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
         await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
         await state.finish()
     else:
@@ -138,11 +124,8 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
 @dp.message_handler(text='Добавить товар')
 async def text_add_product(message: types.Message):
     products_types = get_products_types()
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    for product_type in products_types:
-        button = types.KeyboardButton(product_type)
-        markup.add(button)
-    await message.answer(f'Выбери категорию товара: ', reply_markup=markup)
+    products_types_keyboard = create_keyboard(products_types)
+    await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
     await RequestAdd.ProductCategory.set()
 
 
@@ -153,11 +136,8 @@ async def command_request_add_action_one(message: types.Message, state: FSMConte
     if product_category in products_types:
         await state.update_data(product_category=product_category)
         products_names = get_products_names_by_type(product_category)
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        for product in products_names:
-            button = types.KeyboardButton(product)
-            markup.add(button)
-        await message.answer(f'Выбери товар: ', reply_markup=markup)
+        products_names_keyboard = create_keyboard(products_names)
+        await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboard)
         await RequestAdd.next()
     else:
         await message.answer('Выберите из предложенных, или обратитесь в офис')
