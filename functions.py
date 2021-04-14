@@ -4,6 +4,8 @@ from bot import service
 import os
 import json
 from typing import Union
+import pytz
+from datetime import datetime
 
 
 def get_table_data(table_id: str, range1: str, range2: str, list_name: str = 'Лист1', position: str = 'ROWS'):
@@ -27,16 +29,15 @@ def get_table_range(table_id: str, list_name: str, position: str = 'ROWS'):
     """Получить количество строк в листе таблицы"""
     values = service.spreadsheets().values().get(
         spreadsheetId=table_id,
-        range=f'{list_name}!A1:Z10000',
+        range=f'{list_name}!A1:Z20000',
         majorDimension=position
     ).execute()
     table_data = values['values']
     return len(table_data)
 
 
-# user_value - это список списков
 def update_data_in_table(table_id: str, list_name: str, range1: str, user_value: list, position: str = 'ROWS'):
-    """Обновить данные в таблице"""
+    """Обновить данные в таблице (user_value - это список списков)"""
     service.spreadsheets().values().batchUpdate(
         spreadsheetId=table_id,
         body={
@@ -51,8 +52,8 @@ def update_data_in_table(table_id: str, list_name: str, range1: str, user_value:
 
 
 def append_data_in_table(table_id: str, list_name: str, user_value: list, position: str = 'ROWS'):
-    """Запись в конец таблицы"""
-    list_range = get_table_range(config.TEST_TABLE, list_name)
+    """Запись в конец таблицы (user_value - это список списков)"""
+    list_range = get_table_range(table_id, list_name)
     service.spreadsheets().values().batchUpdate(
         spreadsheetId=table_id,
         body={
@@ -64,6 +65,13 @@ def append_data_in_table(table_id: str, list_name: str, user_value: list, positi
             ]
         }
     ).execute()
+
+
+def set_link_to_cell(table_id: str, donor_list: str, donor_cell: str, recipient_list: str, recipient_cell: str):
+    values = [[f'=\'{donor_list}\'!{donor_cell}']]
+    body = {'values': values}
+    service.spreadsheets().values().update(spreadsheetId=table_id, range=f'{recipient_list}!{recipient_cell}',
+                                           valueInputOption="USER_ENTERED", body=body).execute()
 
 
 def get_trusted_id() -> list:
@@ -265,3 +273,27 @@ def get_product_data_from_data(data: dict) -> list:
                         f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
         products_list.append(product_data)
     return products_list
+
+
+def get_product_name_and_count_from_data(data: dict) -> str:
+    """Получить названия и количество продуктов"""
+    orders = data["orders"]
+    products_list = []
+    for product in orders:
+        product_data = f'{product["Номенклатура"]} -> {product["Количество"]} шт'
+        products_list.append(product_data)
+    products_list = '\n'.join(products_list)
+    return products_list
+
+
+def get_last_number_in_requests():
+    """Получить данные продуктов (список списков)"""
+    numbers = get_table_data(config.REQUESTS, 'A2', 'A20000', list_name='Все', position='COLUMNS')
+    last_number = int(numbers[0][-1])
+    return last_number
+
+
+def time_in_uralsk():
+    tz_uralsk = pytz.timezone('Asia/Atyrau')
+    time_in_uralsk_now = datetime.now(tz_uralsk)
+    return time_in_uralsk_now.strftime('%d.%m.%Y %H:%M:%S')

@@ -225,7 +225,25 @@ async def text_delete_product_action(message: types.Message, state: FSMContext):
 
 @dp.message_handler(text='Завершить 📄')
 async def text_the_end(message: types.Message):
-    await message.answer('Ну пока!', reply_markup=types.ReplyKeyboardRemove())
+    telegram_id = message.from_user.id
+    data = get_data_from_json_file(telegram_id)
+    request_number = get_last_number_in_requests() + 1
+    datetime_now = time_in_uralsk()
+    request_data = get_product_name_and_count_from_data(data)
+    employee_name = data['employee']['Сокращенное имя']
+    request = [[request_number, datetime_now, data['shop']['Название'], data['shop']['ИП/ТОО'], data['shop']['Адрес'],
+                request_data, data['total_sum'], data['shop']['Кассовый аппарат'], employee_name, 'Принят']]
+    append_data_in_table(config.REQUESTS, list_name='Все', user_value=request)
+    lists_in_table = get_lists_names_in_table(config.REQUESTS)
+    if employee_name not in lists_in_table:
+        create_new_list_in_table(config.REQUESTS, employee_name)
+        add_base_titles_from_the_first_page_in_list(config.REQUESTS, employee_name)
+    append_data_in_table(config.REQUESTS, list_name=employee_name, user_value=request)
+    last_request_index_donor = get_table_range(config.REQUESTS, list_name='Все')
+    last_request_index_recipient = get_table_range(config.REQUESTS, list_name='Все') - 1
+    set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
+                     employee_name, f'J{last_request_index_recipient}')
+    await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(commands=["add_new_shop"], state="*")
