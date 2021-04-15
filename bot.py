@@ -30,6 +30,17 @@ class DeleteProduct(StatesGroup):
     Delete = State()
 
 
+class NewShop(StatesGroup):
+    District = State()
+    ShopName = State()
+    OfficialShopName = State()
+    Address = State()
+    Owner = State()
+    PhoneNumber = State()
+    SellerName = State()
+    CashMachine = State()
+
+
 # Авторизуемся и получаем service — экземпляр доступа к API
 credentials = ServiceAccountCredentials.from_json_keyfile_name(
     config.CREDENTIALS_FILE_NAME,

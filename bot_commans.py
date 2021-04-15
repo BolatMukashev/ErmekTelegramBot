@@ -1,9 +1,10 @@
-from bot import dp, bot, Request, RequestAdd, DeleteProduct
+from bot import dp, bot, Request, RequestAdd, DeleteProduct, NewShop
 from functions import *
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from keyboards.next_chioce import next_choice_buttons
 from keyboards.generated_keyboard import create_keyboard
+from keyboards.owner import owner_buttons
 
 
 @dp.message_handler(commands="set_commands", state="*")
@@ -25,13 +26,111 @@ async def command_start(message: types.Message):
         await message.answer('Как админу, тебе доступны команды:\n/set_commands')
 
 
+@dp.message_handler(text='🔙 Отмена', state="*")
+async def text_cancel_action(message: types.Message, state: FSMContext):
+    await message.answer('Действие отменено', reply_markup=types.ReplyKeyboardRemove())
+    await state.finish()
+
+
+@dp.message_handler(commands=["add_new_shop"], state="*")
+async def command_add_new_shop(message: types.Message):
+    telegram_id = message.from_user.id
+    if check_id(telegram_id):
+        available_districts = get_the_districts_available_to_the_employee(telegram_id)
+        districts_keyboard = create_keyboard(available_districts)
+        await message.answer('Чтобы добавить новую торговую точку, ответьте на несколько вопросов')
+        await message.answer('В каком районе расположена торговая точка?', reply_markup=districts_keyboard)
+        await NewShop.District.set()
+
+
+@dp.message_handler(state=NewShop.District, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_one(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    district = message.text
+    available_districts = get_the_districts_available_to_the_employee(telegram_id)
+    if district in available_districts:
+        await state.update_data(district=district)
+        await message.answer('Название торговой точки?', reply_markup=types.ReplyKeyboardRemove())
+        await NewShop.next()
+    else:
+        await message.answer('Для добавления нового района обратитесь в офис')
+
+
+@dp.message_handler(state=NewShop.ShopName, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_two(message: types.Message, state: FSMContext):
+    shop_name = message.text
+    if shop_name:
+        await state.update_data(shop_name=shop_name)
+        await message.answer('Название ИП или ТОО торговой точки?')
+        await NewShop.next()
+    else:
+        await message.answer('Не верное название!')
+
+
+@dp.message_handler(state=NewShop.OfficialShopName, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_three(message: types.Message, state: FSMContext):
+    official_shop_name = message.text
+    await state.update_data(official_shop_name=official_shop_name)
+    await message.answer('Адрес торговой точки?')
+    await NewShop.next()
+
+
+@dp.message_handler(state=NewShop.Address, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_four(message: types.Message, state: FSMContext):
+    address = message.text
+    await state.update_data(address=address)
+    await message.answer('Владелец или арендатор?', reply_markup=owner_buttons)
+    await NewShop.next()
+
+
+@dp.message_handler(state=NewShop.Owner, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_five(message: types.Message, state: FSMContext):
+    owner = message.text
+    if owner == 'Владелец' or owner == 'Арендатор':
+        await state.update_data(owner=owner)
+        await message.answer('Напишите номер телефона торговой точки:', reply_markup=types.ReplyKeyboardRemove())
+        await NewShop.next()
+    else:
+        await message.answer('Ошибка. В случае возникновения затруднений обращайтесь в офис.')
+
+
+@dp.message_handler(state=NewShop.PhoneNumber, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_six(message: types.Message, state: FSMContext):
+    phone_number = message.text
+    phone_number = phone_number.replace(' ', '').replace('+7', '8').strip()
+    if phone_number.isdigit():
+        phone_number = int(phone_number)
+        await state.update_data(phone_number=phone_number)
+        await message.answer('Ф.И.О. продавца?')
+        await NewShop.next()
+    else:
+        await message.answer('Это не похоже на номер телефон. Пример: 87775553322')
+
+
+@dp.message_handler(state=NewShop.SellerName, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_seven(message: types.Message, state: FSMContext):
+    seller_name = message.text
+    await state.update_data(seller_name=seller_name)
+    await message.answer('Кассовый аппарат или ИИН торговой точки:')
+    await NewShop.next()
+
+
+@dp.message_handler(state=NewShop.CashMachine, content_types=types.ContentTypes.TEXT)
+async def command_add_new_shop_action_final(message: types.Message, state: FSMContext):
+    cash_machine = message.text
+    await state.update_data(cash_machine=cash_machine)
+    # дописать добавление в лист
+    await message.answer('Готово. Торговая точка была добавлена в базу!')
+    await state.finish()
+
+
 @dp.message_handler(commands=["new_request"], state="*")
 async def command_request(message: types.Message):
     telegram_id = message.from_user.id
     if check_id(telegram_id):
         available_districts = get_the_districts_available_to_the_employee(telegram_id)
         districts_keyboard = create_keyboard(available_districts)
-        await message.answer(f'Выбери район', reply_markup=districts_keyboard)
+        await message.answer('Выбери район:', reply_markup=districts_keyboard)
         await Request.District.set()
 
 
@@ -168,7 +267,14 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
         product['Сумма'] = product['Цена'] * product['Количество']
         await state.update_data(product=product)
         order_data = get_data_from_json_file(telegram_id)
-        order_data['orders'].append(product)
+
+        products = get_products_names_from_data(order_data)
+        if product['Номенклатура'] in products:
+            index = get_product_index_by_name_in_data(product['Номенклатура'], order_data)
+            order_data['orders'][index]['Количество'] += product['Количество']
+            order_data['orders'][index]['Сумма'] += product['Сумма']
+        else:
+            order_data['orders'].append(product)
         order_data['total_sum'] += product['Сумма']
         edit_data_in_json_file(telegram_id, order_data)
         shop_data = get_shop_data_from_data(order_data)
@@ -244,14 +350,6 @@ async def text_the_end(message: types.Message):
     set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
                      employee_name, f'J{last_request_index_recipient}')
     await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
-
-
-@dp.message_handler(commands=["add_new_shop"], state="*")
-async def command_add_new_shop(message: types.Message):
-    telegram_id = message.from_user.id
-    if check_id(telegram_id):
-        await message.answer('Функция находится в разработке. Для добавления новой торговой точки обратитесь в офис',
-                             reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler()

@@ -249,7 +249,15 @@ def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
         json.dump(new_data, json_file, ensure_ascii=False)
 
 
-def get_product_index_by_name_in_data(product_name: str, data: dict):
+def get_products_names_from_data(data: dict) -> list:
+    """Получить названия продуктов"""
+    product_names = []
+    for product in data['orders']:
+        product_names.append(product['Номенклатура'])
+    return product_names
+
+
+def get_product_index_by_name_in_data(product_name: str, data: dict) -> int:
     """Получить индекс продукта"""
     for idd, product in enumerate(data['orders']):
         if product['Номенклатура'] == product_name:
@@ -280,20 +288,21 @@ def get_product_name_and_count_from_data(data: dict) -> str:
     orders = data["orders"]
     products_list = []
     for product in orders:
-        product_data = f'{product["Номенклатура"]} -> {product["Количество"]} шт'
+        product_data = f'{product["Номенклатура"]}\t📥 {product["Количество"]} шт'
         products_list.append(product_data)
     products_list = '\n'.join(products_list)
     return products_list
 
 
-def get_last_number_in_requests():
+def get_last_number_in_requests() -> int:
     """Получить данные продуктов (список списков)"""
     numbers = get_table_data(config.REQUESTS, 'A2', 'A20000', list_name='Все', position='COLUMNS')
     last_number = int(numbers[0][-1])
     return last_number
 
 
-def time_in_uralsk():
+def time_in_uralsk() -> str:
+    """Получить время г.Уральск/г.Атырау"""
     tz_uralsk = pytz.timezone('Asia/Atyrau')
     time_in_uralsk_now = datetime.now(tz_uralsk)
     return time_in_uralsk_now.strftime('%d.%m.%Y %H:%M:%S')
