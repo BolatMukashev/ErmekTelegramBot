@@ -5,6 +5,7 @@ from aiogram.dispatcher import FSMContext
 from keyboards.next_chioce import next_choice_buttons
 from keyboards.generated_keyboard import create_keyboard
 from keyboards.owner import owner_buttons
+from models import Shop
 
 
 @dp.message_handler(commands="set_commands", state="*")
@@ -119,7 +120,10 @@ async def command_add_new_shop_action_seven(message: types.Message, state: FSMCo
 async def command_add_new_shop_action_final(message: types.Message, state: FSMContext):
     cash_machine = message.text
     await state.update_data(cash_machine=cash_machine)
-    # дописать добавление в лист
+    data = await state.get_data()
+    new_shop = Shop(data['district'], data['shop_name'], data['official_shop_name'], data['address'], data['owner'],
+                    data['phone_number'], data['seller_name'], data['cash_machine'])
+    new_shop.add_shop()
     await message.answer('Готово. Торговая точка была добавлена в базу!')
     await state.finish()
 
