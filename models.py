@@ -25,7 +25,7 @@ class Shop(object):
         self.remark = remark
 
     def add_shop(self):
-        """Добавляем магазин в гугл талицу"""
+        """Добавляем магазин в гугл таблицу"""
         values = [[self.shop_name, self.official_shop_name, self.address, self.owner, self.phone_number,
                   self.seller_name, self.cash_machine, self.remark]]
         append_data_in_table(config.SHOPS, list_name=self.district, user_value=values)
