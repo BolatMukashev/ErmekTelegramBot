@@ -6,6 +6,7 @@ from keyboards.next_chioce import next_choice_buttons
 from keyboards.generated_keyboard import create_keyboard
 from keyboards.owner import owner_buttons
 from models import Shop
+from excel_functions import new_doc
 
 
 @dp.message_handler(commands="set_commands", state="*")
@@ -60,17 +61,16 @@ async def command_add_new_shop_action_one(message: types.Message, state: FSMCont
 @dp.message_handler(state=NewShop.ShopName, content_types=types.ContentTypes.TEXT)
 async def command_add_new_shop_action_two(message: types.Message, state: FSMContext):
     shop_name = message.text
-    if shop_name:
-        await state.update_data(shop_name=shop_name)
-        await message.answer('Название ИП или ТОО торговой точки?')
-        await NewShop.next()
-    else:
-        await message.answer('Не верное название!')
+    shop_name = shop_name.strip()
+    await state.update_data(shop_name=shop_name)
+    await message.answer('Название ИП или ТОО торговой точки?')
+    await NewShop.next()
 
 
 @dp.message_handler(state=NewShop.OfficialShopName, content_types=types.ContentTypes.TEXT)
 async def command_add_new_shop_action_three(message: types.Message, state: FSMContext):
     official_shop_name = message.text
+    official_shop_name = official_shop_name.strip()
     await state.update_data(official_shop_name=official_shop_name)
     await message.answer('Адрес торговой точки?')
     await NewShop.next()
@@ -79,6 +79,7 @@ async def command_add_new_shop_action_three(message: types.Message, state: FSMCo
 @dp.message_handler(state=NewShop.Address, content_types=types.ContentTypes.TEXT)
 async def command_add_new_shop_action_four(message: types.Message, state: FSMContext):
     address = message.text
+    address = address.strip()
     await state.update_data(address=address)
     await message.answer('Владелец или арендатор?', reply_markup=owner_buttons)
     await NewShop.next()
@@ -87,6 +88,7 @@ async def command_add_new_shop_action_four(message: types.Message, state: FSMCon
 @dp.message_handler(state=NewShop.Owner, content_types=types.ContentTypes.TEXT)
 async def command_add_new_shop_action_five(message: types.Message, state: FSMContext):
     owner = message.text
+    owner = owner.strip()
     if owner == 'Владелец' or owner == 'Арендатор':
         await state.update_data(owner=owner)
         await message.answer('Напишите номер телефона торговой точки:', reply_markup=types.ReplyKeyboardRemove())
@@ -119,6 +121,7 @@ async def command_add_new_shop_action_seven(message: types.Message, state: FSMCo
 @dp.message_handler(state=NewShop.CashMachine, content_types=types.ContentTypes.TEXT)
 async def command_add_new_shop_action_final(message: types.Message, state: FSMContext):
     cash_machine = message.text
+    cash_machine = cash_machine.strip()
     await state.update_data(cash_machine=cash_machine)
     data = await state.get_data()
     new_shop = Shop(data['district'], data['shop_name'], data['official_shop_name'], data['address'], data['owner'],
@@ -353,6 +356,8 @@ async def text_the_end(message: types.Message):
     last_request_index_recipient = get_table_range(config.REQUESTS, list_name='Все') - 1
     set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
                      employee_name, f'J{last_request_index_recipient}')
+    uralsk_date = time_in_uralsk_date()
+    new_doc(data, request_number, uralsk_date)
     await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
 
 

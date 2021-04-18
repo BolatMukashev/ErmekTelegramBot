@@ -169,7 +169,7 @@ def get_all_products():
     formatted_data = []
     for rows in data:
         res = {titles[idd]: value for idd, value in enumerate(rows)}
-        res['Цена'] = float(res['Цена'].replace(',', '.'))
+        res['Цена'] = int(float(res['Цена'].replace(',', '.')))
         formatted_data.append(res)
     return formatted_data
 
@@ -288,7 +288,7 @@ def get_product_name_and_count_from_data(data: dict) -> str:
     orders = data["orders"]
     products_list = []
     for product in orders:
-        product_data = f'{product["Номенклатура"]}\t📥 {product["Количество"]} шт'
+        product_data = f'{product["Номенклатура"]}({product["Штрих код"]})\t📥 {product["Количество"]} шт'
         products_list.append(product_data)
     products_list = '\n'.join(products_list)
     return products_list
@@ -302,7 +302,14 @@ def get_last_number_in_requests() -> int:
 
 
 def time_in_uralsk() -> str:
-    """Получить время г.Уральск/г.Атырау"""
+    """Получить дату и время г.Уральск/г.Атырау"""
     tz_uralsk = pytz.timezone('Asia/Atyrau')
     time_in_uralsk_now = datetime.now(tz_uralsk)
     return time_in_uralsk_now.strftime('%d.%m.%Y %H:%M:%S')
+
+
+def time_in_uralsk_date() -> str:
+    """Получить дату г.Уральск/г.Атырау"""
+    tz_uralsk = pytz.timezone('Asia/Atyrau')
+    time_in_uralsk_now = datetime.now(tz_uralsk)
+    return time_in_uralsk_now.strftime('%d.%m.%Y')
