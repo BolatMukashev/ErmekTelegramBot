@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 from openpyxl.styles.borders import Border, Side
+from openpyxl.styles.alignment import Alignment
 from openpyxl.styles import Font
 from functions import *
 
@@ -10,12 +11,33 @@ file_to_open = os.path.join(path_to_file, "schet_factura.xlsx")
 title_font = Font(name='Arial', size=12, bold=True, italic=False)
 simple_font = Font(name='Arial', size=8, bold=False, italic=False)
 
-
 # стиль ячеек
 thin_border = Border(left=Side(style='thin'),
                      right=Side(style='thin'),
                      top=Side(style='thin'),
                      bottom=Side(style='thin'))
+
+# позиционирование
+left_alignment = Alignment(horizontal='left',
+                           vertical='center',
+                           text_rotation=0,
+                           wrap_text=True,
+                           shrink_to_fit=False,
+                           indent=0)
+
+left_alignment_name = Alignment(horizontal='left',
+                                vertical='center',
+                                text_rotation=0,
+                                wrap_text=False,
+                                shrink_to_fit=False,
+                                indent=0)
+
+center_alignment = Alignment(horizontal='center',
+                             vertical='center',
+                             text_rotation=0,
+                             wrap_text=False,
+                             shrink_to_fit=False,
+                             indent=0)
 
 
 def new_doc(user_data: dict, request_number: int, date_now: str):
@@ -33,13 +55,13 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
     rows = len(user_data['orders'])
 
     # переместить строки
-    sheet.move_range("A26:K35", rows=rows, cols=0)
+    sheet.move_range("A24:K33", rows=rows, cols=0)
 
-    table = sheet["A26": f"K{26 + rows}"]
+    table = sheet["A24": f"K{24 + rows}"]
 
     table_data = []
     for idd, row in enumerate(user_data['orders']):
-        order = [idd+1, row['Номенклатура'], 'шт.', row['Количество'], row['Цена'], row['Сумма'],
+        order = [idd + 1, row['Номенклатура'], 'шт.', row['Количество'], row['Цена'], row['Сумма'],
                  None, None, None, None, None]
         table_data.append(order)
 
@@ -52,12 +74,21 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
             cell.border = thin_border
             cell.font = simple_font
 
-    sheet[f'F{26+rows}'] = user_data['total_sum']
-    sheet[f'H{29 + rows}'] = user_data['employee']['Сокращенное имя']
+    sheet[f'F{24 + rows}'] = user_data['total_sum']
 
-    save_name = os.path.join(path_to_file, f'Счет-фактура №{request_number}.xlsx')
+    sheet[f'H{27 + rows}'] = user_data['employee']['Сокращенное имя']
+    sheet[f'H{27 + rows}'].alignment = left_alignment_name
+
+    for x in range(24, 25 + rows):
+        sheet[f'A{x}'].alignment = center_alignment
+        sheet[f'B{x}'].alignment = left_alignment
+        sheet[f'C{x}'].alignment = center_alignment
+        sheet[f'D{x}'].alignment = center_alignment
+        sheet[f'E{x}'].alignment = center_alignment
+        sheet[f'F{x}'].alignment = center_alignment
+
+    save_name = os.path.join(path_to_file, f'Счет-фактура {request_number}.xlsx')
     wb.save(save_name)
-
 
 # sheet['A27'].border = thin_border
 

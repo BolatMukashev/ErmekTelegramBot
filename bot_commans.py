@@ -358,6 +358,11 @@ async def text_the_end(message: types.Message):
                      employee_name, f'J{last_request_index_recipient}')
     uralsk_date = time_in_uralsk_date()
     new_doc(data, request_number, uralsk_date)
+    try:
+        with open(r'./docs/' + f'Счет-фактура {request_number}.xlsx', 'rb') as document:
+            await message.answer_document(document)
+    except:
+        pass
     await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
 
 
