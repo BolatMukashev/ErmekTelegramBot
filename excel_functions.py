@@ -87,6 +87,8 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
         sheet[f'E{x}'].alignment = center_alignment
         sheet[f'F{x}'].alignment = center_alignment
 
+    sheet[f'A{24 + rows}'].alignment = left_alignment_name
+
     save_name = os.path.join(path_to_file, f'Счет-фактура {request_number}.xlsx')
     wb.save(save_name)
 

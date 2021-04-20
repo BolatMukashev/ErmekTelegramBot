@@ -14,7 +14,8 @@ async def cmd_set_commands(message: types.Message):
     user_id = message.from_user.id
     if user_id == config.ADMIN_ID:
         commands = [types.BotCommand(command="/new_request", description="Новая заявка"),
-                    types.BotCommand(command="/add_new_shop", description="Добавить торговую точку")]
+                    types.BotCommand(command="/add_new_shop", description="Добавить торговую точку"),
+                    types.BotCommand(command="/statistics", description="Показать статистику")]
         await bot.set_my_commands(commands)
         await message.answer("Команды установлены!")
 
@@ -26,6 +27,30 @@ async def command_start(message: types.Message):
     await message.answer(f'Привет, {full_name}!\nТвой Telegram ID: {telegram_id}')
     if telegram_id == config.ADMIN_ID:
         await message.answer('Как админу, тебе доступны команды:\n/set_commands')
+
+
+@dp.message_handler(commands=["statistics"], state="*")
+async def command_statistics(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    employee = get_employee_by_id(telegram_id)
+    if employee:
+        list_names = get_lists_names_in_table(config.REQUESTS)
+        if employee['Сокращенное имя'] in list_names:
+            data = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
+            print(data)
+            all_requests_count = get_all_request_count(data)
+            requests_count_today = get_request_count_today(data)
+            requests_count_on_month = get_request_count_on_this_month(data)
+            requests_in_previous_month = get_request_count_on_previous_month(data)
+            requests_count_on_year = get_request_count_on_this_year(data)
+            text = ['Твоя статистика:\n',
+                    f'Общее количество заявок: {all_requests_count}',
+                    f'Заявок сегодня: {requests_count_today}',
+                    f'Заявок в этом месяце: {requests_count_on_month}',
+                    f'Заявок за прошлый месяц: {requests_in_previous_month}',
+                    f'Заявок в этом году: {requests_count_on_year}',
+                    ]
+            await message.answer('\n'.join(text))
 
 
 @dp.message_handler(text='🔙 Отмена', state="*")

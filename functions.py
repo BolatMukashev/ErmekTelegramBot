@@ -5,7 +5,7 @@ import os
 import json
 from typing import Union
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def get_table_data(table_id: str, range1: str, range2: str, list_name: str = 'Лист1', position: str = 'ROWS'):
@@ -301,6 +301,13 @@ def get_last_number_in_requests() -> int:
     return last_number
 
 
+def time_in_uralsk_origin() -> datetime:
+    """Получить дату и время г.Уральск/г.Атырау"""
+    tz_uralsk = pytz.timezone('Asia/Atyrau')
+    time_in_uralsk_now = datetime.now(tz_uralsk)
+    return time_in_uralsk_now
+
+
 def time_in_uralsk() -> str:
     """Получить дату и время г.Уральск/г.Атырау"""
     tz_uralsk = pytz.timezone('Asia/Atyrau')
@@ -313,3 +320,56 @@ def time_in_uralsk_date() -> str:
     tz_uralsk = pytz.timezone('Asia/Atyrau')
     time_in_uralsk_now = datetime.now(tz_uralsk)
     return time_in_uralsk_now.strftime('%d.%m.%Y')
+
+
+# STATISTICS ----------------------------------------------------------------------------------------------------------
+
+def get_all_request_count(data: dict) -> int:
+    """Получить общее количество заявок"""
+    return len(data)
+
+
+def get_request_count_today(data: dict) -> int:
+    """Получить количество заявок сегодня"""
+    today = time_in_uralsk_date()
+    count = 0
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%d.%m.%Y') == today:
+            count += 1
+    return count
+
+
+def get_request_count_on_this_month(data: dict) -> int:
+    """Получить количество заявок за месяц"""
+    today = time_in_uralsk_origin()
+    count = 0
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
+            count += 1
+    return count
+
+
+def get_request_count_on_previous_month(data: dict) -> int:
+    """Получить количество заявок за прошлый месяц"""
+    today = time_in_uralsk_origin()
+    first_day = today.replace(day=1)
+    previous_month = first_day - timedelta(days=1)
+    count = 0
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
+            count += 1
+    return count
+
+
+def get_request_count_on_this_year(data: dict) -> int:
+    """Получить количество заявок за год"""
+    today = time_in_uralsk_origin()
+    count = 0
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%Y') == today.strftime('%Y'):
+            count += 1
+    return count
