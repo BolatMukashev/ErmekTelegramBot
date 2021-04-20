@@ -38,18 +38,22 @@ async def command_statistics(message: types.Message, state: FSMContext):
         if employee['Сокращенное имя'] in list_names:
             data = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
             print(data)
-            all_requests_count = get_all_request_count(data)
-            requests_count_today = get_request_count_today(data)
-            requests_count_on_month = get_request_count_on_this_month(data)
-            requests_in_previous_month = get_request_count_on_previous_month(data)
-            requests_count_on_year = get_request_count_on_this_year(data)
-            text = ['Твоя статистика:\n',
-                    f'Общее количество заявок: {all_requests_count}',
-                    f'Заявок сегодня: {requests_count_today}',
+            all_requests_count = get_all_requests_count(data)
+            requests_count_today = get_requests_count_today(data)
+            requests_count_on_month = get_requests_count_on_this_month(data)
+            requests_in_previous_month = get_requests_count_on_previous_month(data)
+            requests_count_on_year = get_requests_count_on_this_year(data)
+
+            total_sum = get_all_requests_total_sum(data)
+
+            await message.answer('Твоя статистика:')
+            text = [f'Общее количество заявок: {all_requests_count}',
+                    f'На сумму: {total_sum} тг']
+            await message.answer('\n'.join(text))
+            text = [f'Заявок сегодня: {requests_count_today}',
                     f'Заявок в этом месяце: {requests_count_on_month}',
                     f'Заявок за прошлый месяц: {requests_in_previous_month}',
-                    f'Заявок в этом году: {requests_count_on_year}',
-                    ]
+                    f'Заявок в этом году: {requests_count_on_year}']
             await message.answer('\n'.join(text))
 
 

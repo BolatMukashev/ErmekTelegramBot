@@ -324,12 +324,12 @@ def time_in_uralsk_date() -> str:
 
 # STATISTICS ----------------------------------------------------------------------------------------------------------
 
-def get_all_request_count(data: dict) -> int:
+def get_all_requests_count(data: dict) -> int:
     """Получить общее количество заявок"""
     return len(data)
 
 
-def get_request_count_today(data: dict) -> int:
+def get_requests_count_today(data: dict) -> int:
     """Получить количество заявок сегодня"""
     today = time_in_uralsk_date()
     count = 0
@@ -340,7 +340,7 @@ def get_request_count_today(data: dict) -> int:
     return count
 
 
-def get_request_count_on_this_month(data: dict) -> int:
+def get_requests_count_on_this_month(data: dict) -> int:
     """Получить количество заявок за месяц"""
     today = time_in_uralsk_origin()
     count = 0
@@ -351,7 +351,7 @@ def get_request_count_on_this_month(data: dict) -> int:
     return count
 
 
-def get_request_count_on_previous_month(data: dict) -> int:
+def get_requests_count_on_previous_month(data: dict) -> int:
     """Получить количество заявок за прошлый месяц"""
     today = time_in_uralsk_origin()
     first_day = today.replace(day=1)
@@ -364,7 +364,7 @@ def get_request_count_on_previous_month(data: dict) -> int:
     return count
 
 
-def get_request_count_on_this_year(data: dict) -> int:
+def get_requests_count_on_this_year(data: dict) -> int:
     """Получить количество заявок за год"""
     today = time_in_uralsk_origin()
     count = 0
@@ -372,4 +372,12 @@ def get_request_count_on_this_year(data: dict) -> int:
         request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
         if request_date.strftime('%Y') == today.strftime('%Y'):
             count += 1
+    return count
+
+
+def get_all_requests_total_sum(data: dict) -> int:
+    """Получить сумму со всех заявок"""
+    count = 0
+    for request in data:
+        count += int(request[6])
     return count
