@@ -52,6 +52,12 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
     sheet['A1'] = f'Счет-фактура № {request_number} от {date_now} г.'
     sheet['A1'].font = title_font
 
+    shop_bin = user_data["shop"]["Кассовый аппарат"]
+    shop_name = user_data["shop"]["ИП/ТОО"]
+    shop_address = user_data["shop"]["Адрес"]
+    sheet['A15'] = f'Грузополучатель: БИН/ИИН {shop_bin}, {shop_name}, {shop_address}'
+    sheet['A18'] = f'БИН/ИИН и адрес местонахождения получателя: {shop_bin}, {shop_address}'
+
     rows = len(user_data['orders'])
 
     # переместить строки
@@ -76,8 +82,11 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
 
     sheet[f'F{24 + rows}'] = user_data['total_sum']
 
-    sheet[f'H{27 + rows}'] = user_data['employee']['Сокращенное имя']
+    sheet[f'H{27 + rows}'] = 'Торговый представитель'
     sheet[f'H{27 + rows}'].alignment = left_alignment_name
+
+    sheet[f'H{30 + rows}'] = user_data['employee']['Сокращенное имя']
+    sheet[f'H{30 + rows}'].alignment = left_alignment_name
 
     for x in range(24, 25 + rows):
         sheet[f'A{x}'].alignment = center_alignment

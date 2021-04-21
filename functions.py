@@ -324,55 +324,26 @@ def time_in_uralsk_date() -> str:
 
 # STATISTICS ----------------------------------------------------------------------------------------------------------
 
+
+# общие функции
+def get_top_five_payable_shops(requests_list: list) -> list:
+    """Получить топ 5 платежеспособных магазинов из списка"""
+    payable_shops = sorted(requests_list, key=lambda k: k[6], reverse=True)
+    return payable_shops[0:5]
+
+
+def get_shops_names_and_sum_in_text_format(data: list) -> str:
+    """Получить названия и суммы заказов магазинов в текстовом формате"""
+    shops = []
+    for request in data:
+        shops.append(f'{request[3]} ⇾ {request[6]}')
+    return '\n'.join(shops)
+
+
+# за все время
 def get_all_requests_count(data: dict) -> int:
     """Получить общее количество заявок"""
     return len(data)
-
-
-def get_requests_count_today(data: dict) -> int:
-    """Получить количество заявок сегодня"""
-    today = time_in_uralsk_date()
-    count = 0
-    for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%d.%m.%Y') == today:
-            count += 1
-    return count
-
-
-def get_requests_count_on_this_month(data: dict) -> int:
-    """Получить количество заявок за месяц"""
-    today = time_in_uralsk_origin()
-    count = 0
-    for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
-            count += 1
-    return count
-
-
-def get_requests_count_on_previous_month(data: dict) -> int:
-    """Получить количество заявок за прошлый месяц"""
-    today = time_in_uralsk_origin()
-    first_day = today.replace(day=1)
-    previous_month = first_day - timedelta(days=1)
-    count = 0
-    for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
-            count += 1
-    return count
-
-
-def get_requests_count_on_this_year(data: dict) -> int:
-    """Получить количество заявок за год"""
-    today = time_in_uralsk_origin()
-    count = 0
-    for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%Y') == today.strftime('%Y'):
-            count += 1
-    return count
 
 
 def get_all_requests_total_sum(data: dict) -> int:
@@ -381,3 +352,156 @@ def get_all_requests_total_sum(data: dict) -> int:
     for request in data:
         count += int(request[6])
     return count
+
+
+def get_top_five_payable_shops_ever(data: list) -> str:
+    """Получить топ 5 платежеспособных магазинов за все время"""
+    payable_shops = get_top_five_payable_shops(data)
+    payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
+    return payable_shops_text_format
+
+
+# день
+def get_requests_today(data: list) -> list:
+    """Получить заявки за сегодня"""
+    today = time_in_uralsk_origin()
+    requests_today = []
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%d.%m.%Y') == today.strftime('%d.%m.%Y'):
+            requests_today.append(request)
+    return requests_today
+
+
+def get_requests_count_today(data: list) -> int:
+    """Получить количество заявок сегодня"""
+    requests_today = get_requests_today(data)
+    return len(requests_today)
+
+
+def get_all_requests_total_sum_today(data: list) -> int:
+    """Получить сумму всех заявок сегодня"""
+    requests_today = get_requests_today(data)
+    count = 0
+    for request in requests_today:
+        count += int(request[6])
+    return count
+
+
+def get_top_five_payable_shops_today(data: list) -> str:
+    """Получить топ 5 платежеспособных магазинов за сегодня"""
+    requests_today = get_requests_today(data)
+    payable_shops = get_top_five_payable_shops(requests_today)
+    payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
+    return payable_shops_text_format
+
+
+# месяц
+def get_requests_on_this_month(data: list) -> list:
+    """Получить все заявки за этот месяц"""
+    today = time_in_uralsk_origin()
+    requests_on_this_month = []
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
+            requests_on_this_month.append(request)
+    return requests_on_this_month
+
+
+def get_requests_count_on_this_month(data: list) -> int:
+    """Получить количество заявок за месяц"""
+    requests_on_this_month = get_requests_on_this_month(data)
+    return len(requests_on_this_month)
+
+
+def get_all_requests_total_sum_on_this_month(data: list) -> int:
+    """Получить сумму всех заявок в этом месяце"""
+    requests_on_this_month = get_requests_on_this_month(data)
+    count = 0
+    for request in requests_on_this_month:
+        count += int(request[6])
+    return count
+
+
+def get_top_five_payable_shops_on_this_month(data: list) -> str:
+    """Получить топ 5 платежеспособных магазинов за месяц"""
+    requests_on_this_month = get_requests_on_this_month(data)
+    payable_shops = get_top_five_payable_shops(requests_on_this_month)
+    payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
+    return payable_shops_text_format
+
+
+# прошлый месяц
+def get_requests_on_previous_month(data: list) -> list:
+    """Получить заявки за прошлый месяц"""
+    today = time_in_uralsk_origin()
+    first_day = today.replace(day=1)
+    previous_month = first_day - timedelta(days=1)
+    requests_on_previous_month = []
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
+            requests_on_previous_month.append(request)
+    return requests_on_previous_month
+
+
+def get_requests_count_on_previous_month(data: list) -> int:
+    """Получить количество заявок за прошлый месяц"""
+    requests_on_previous_month = get_requests_on_previous_month(data)
+    return len(requests_on_previous_month)
+
+
+def get_all_requests_total_sum_on_previous_month(data: list) -> int:
+    """Получить сумму всех заявок в прошлом месяце"""
+    requests_on_previous_month = get_requests_on_previous_month(data)
+    count = 0
+    for request in requests_on_previous_month:
+        count += int(request[6])
+    return count
+
+
+def get_top_five_payable_shops_on_previous_month(data: list) -> str:
+    """Получить топ 5 платежеспособных магазинов за прошлый месяц"""
+    requests_on_previous_month = get_requests_on_previous_month(data)
+    payable_shops = get_top_five_payable_shops(requests_on_previous_month)
+    payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
+    return payable_shops_text_format
+
+
+# год
+def get_requests_on_this_year(data: list) -> list:
+    """Получить все заявки за год"""
+    today = time_in_uralsk_origin()
+    requests_on_this_year = []
+    for request in data:
+        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+        if request_date.strftime('%Y') == today.strftime('%Y'):
+            requests_on_this_year.append(request)
+    return requests_on_this_year
+
+
+def get_requests_count_on_this_year(data: list) -> int:
+    """Получить количество заявок за год"""
+    requests_on_this_year = get_requests_on_this_year(data)
+    return len(requests_on_this_year)
+
+
+def get_all_requests_total_sum_on_this_year(data: list) -> int:
+    """Получить сумму всех заявок за год"""
+    requests_on_this_year = get_requests_on_this_year(data)
+    count = 0
+    for request in requests_on_this_year:
+        count += int(request[6])
+    return count
+
+
+def get_top_five_payable_shops_on_this_year(data: list) -> str:
+    """Получить топ 5 платежеспособных магазинов за прошлый месяц"""
+    requests_on_this_year = get_requests_on_this_year(data)
+    payable_shops = get_top_five_payable_shops(requests_on_this_year)
+    payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
+    return payable_shops_text_format
+
+
+# объединять одинаковые
+# статус отменен
