@@ -525,3 +525,12 @@ def get_top_five_payable_shops_on_this_year(data: list) -> str:
     payable_shops = get_top_five_payable_shops(requests_on_this_year)
     payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
     return payable_shops_text_format
+
+
+# FILE ---------------------------------------------------------------------------------------------------------------
+
+
+def delete_file(file_name: str):
+    """удаляем файл в папке docs"""
+    path = os.path.join(os.getcwd(), 'docs', file_name)
+    os.remove(path)

@@ -37,7 +37,6 @@ async def command_statistics(message: types.Message, state: FSMContext):
         list_names = get_lists_names_in_table(config.REQUESTS)
         if employee['Сокращенное имя'] in list_names:
             data = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
-            print(data)
             all_requests_count = get_all_requests_count(data)
             total_sum = get_all_requests_total_sum(data)
             top_five_payable_shops_ever = get_top_five_payable_shops_ever(data)
@@ -410,9 +409,11 @@ async def text_the_end(message: types.Message):
                      employee_name, f'J{last_request_index_recipient}')
     uralsk_date = time_in_uralsk_date()
     new_doc(data, request_number, uralsk_date)
+    file_name = f'Счет-фактура {request_number}.xlsx'
     try:
-        with open(r'./docs/' + f'Счет-фактура {request_number}.xlsx', 'rb') as document:
+        with open(r'./docs/' + file_name, 'rb') as document:
             await message.answer_document(document)
+            delete_file(file_name)
     except:
         pass
     await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
