@@ -328,35 +328,55 @@ def time_in_uralsk_date() -> str:
 # общие функции
 def get_top_five_payable_shops(requests_list: list) -> list:
     """Получить топ 5 платежеспособных магазинов из списка"""
-    payable_shops = sorted(requests_list, key=lambda k: k[6], reverse=True)
-    return payable_shops[0:5]
+    new_data = {}
+    for request in requests_list:
+        if request[3] in new_data:
+            new_data[request[3]] += int(request[6])
+        else:
+            new_data[request[3]] = int(request[6])
+    new_data = list(new_data.items())
+    new_data = sorted(new_data, key=lambda k: k[1], reverse=True)
+    return new_data[0:5]
 
 
 def get_shops_names_and_sum_in_text_format(data: list) -> str:
     """Получить названия и суммы заказов магазинов в текстовом формате"""
     shops = []
     for request in data:
-        shops.append(f'{request[3]} ⇾ {request[6]}')
+        shops.append(f'{request[0]} ⇾ {request[1]}')
     return '\n'.join(shops)
 
 
 # за все время
-def get_all_requests_count(data: dict) -> int:
-    """Получить общее количество заявок"""
-    return len(data)
 
-
-def get_all_requests_total_sum(data: dict) -> int:
-    """Получить сумму со всех заявок"""
-    count = 0
+def get_all_requests(data: list) -> list:
+    """Получить все не отмененные заявки"""
+    requests = []
     for request in data:
+        if request[9] != 'Отменен':
+            requests.append(request)
+    return requests
+
+
+def get_all_requests_count(data: list) -> int:
+    """Получить общее количество заявок"""
+    requests = get_all_requests(data)
+    return len(requests)
+
+
+def get_all_requests_total_sum(data: list) -> int:
+    """Получить сумму со всех заявок"""
+    requests = get_all_requests(data)
+    count = 0
+    for request in requests:
         count += int(request[6])
     return count
 
 
 def get_top_five_payable_shops_ever(data: list) -> str:
     """Получить топ 5 платежеспособных магазинов за все время"""
-    payable_shops = get_top_five_payable_shops(data)
+    requests = get_all_requests(data)
+    payable_shops = get_top_five_payable_shops(requests)
     payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
     return payable_shops_text_format
 
@@ -367,9 +387,10 @@ def get_requests_today(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_today = []
     for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%d.%m.%Y') == today.strftime('%d.%m.%Y'):
-            requests_today.append(request)
+        if request[9] != 'Отменен':
+            request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+            if request_date.strftime('%d.%m.%Y') == today.strftime('%d.%m.%Y'):
+                requests_today.append(request)
     return requests_today
 
 
@@ -402,9 +423,10 @@ def get_requests_on_this_month(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_on_this_month = []
     for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
-            requests_on_this_month.append(request)
+        if request[9] != 'Отменен':
+            request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+            if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
+                requests_on_this_month.append(request)
     return requests_on_this_month
 
 
@@ -439,9 +461,10 @@ def get_requests_on_previous_month(data: list) -> list:
     previous_month = first_day - timedelta(days=1)
     requests_on_previous_month = []
     for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
-            requests_on_previous_month.append(request)
+        if request[9] != 'Отменен':
+            request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+            if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
+                requests_on_previous_month.append(request)
     return requests_on_previous_month
 
 
@@ -474,9 +497,10 @@ def get_requests_on_this_year(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_on_this_year = []
     for request in data:
-        request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
-        if request_date.strftime('%Y') == today.strftime('%Y'):
-            requests_on_this_year.append(request)
+        if request[9] != 'Отменен':
+            request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
+            if request_date.strftime('%Y') == today.strftime('%Y'):
+                requests_on_this_year.append(request)
     return requests_on_this_year
 
 
@@ -501,7 +525,3 @@ def get_top_five_payable_shops_on_this_year(data: list) -> str:
     payable_shops = get_top_five_payable_shops(requests_on_this_year)
     payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
     return payable_shops_text_format
-
-
-# объединять одинаковые
-# статус отменен

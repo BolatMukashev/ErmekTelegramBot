@@ -55,8 +55,8 @@ def new_doc(user_data: dict, request_number: int, date_now: str):
     shop_bin = user_data["shop"]["Кассовый аппарат"]
     shop_name = user_data["shop"]["ИП/ТОО"]
     shop_address = user_data["shop"]["Адрес"]
-    sheet['A15'] = f'Грузополучатель: БИН/ИИН {shop_bin}, {shop_name}, {shop_address}'
-    sheet['A18'] = f'БИН/ИИН и адрес местонахождения получателя: {shop_bin}, {shop_address}'
+    sheet['A15'] = f'Грузополучатель: БИН/ИИН {shop_bin}, {shop_name}, г.Уральск,{shop_address}'
+    sheet['A18'] = f'БИН/ИИН и адрес местонахождения получателя: БИН/ИИН {shop_bin}, г.Уральск,{shop_address}'
 
     rows = len(user_data['orders'])
 
