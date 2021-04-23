@@ -37,6 +37,7 @@ async def command_statistics(message: types.Message, state: FSMContext):
         list_names = get_lists_names_in_table(config.REQUESTS)
         if employee['Сокращенное имя'] in list_names:
             data = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
+            print(data)
             all_requests_count = get_all_requests_count(data)
             total_sum = get_all_requests_total_sum(data)
             top_five_payable_shops_ever = get_top_five_payable_shops_ever(data)
@@ -403,8 +404,8 @@ async def text_the_end(message: types.Message):
         create_new_list_in_table(config.REQUESTS, employee_name)
         add_base_titles_from_the_first_page_in_list(config.REQUESTS, employee_name)
     append_data_in_table(config.REQUESTS, list_name=employee_name, user_value=request)
-    last_request_index_donor = get_table_range(config.REQUESTS, list_name='Все')
-    last_request_index_recipient = get_table_range(config.REQUESTS, list_name='Все') - 1
+    last_request_index_donor = get_last_index_by_employee_name_in_all_requests(employee_name)
+    last_request_index_recipient = get_table_range(config.REQUESTS, employee_name)
     set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
                      employee_name, f'J{last_request_index_recipient}')
     uralsk_date = time_in_uralsk_date()

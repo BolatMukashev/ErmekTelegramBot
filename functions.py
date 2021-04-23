@@ -19,12 +19,6 @@ def get_table_data(table_id: str, range1: str, range2: str, list_name: str = 'Л
     return table_data
 
 
-def get_data_in_message_form(table_data: list):
-    result = [' '.join(x) for x in table_data]
-    result = '\n'.join(result)
-    return result
-
-
 def get_table_range(table_id: str, list_name: str, position: str = 'ROWS'):
     """Получить количество строк в листе таблицы"""
     values = service.spreadsheets().values().get(
@@ -79,6 +73,12 @@ def get_trusted_id() -> list:
     all_id = get_table_data(config.EMPLOYEES_LIST, range1='C2', range2='C10000', position='COLUMNS')
     all_id = [int(x) for x in all_id[0]]
     return all_id
+
+
+def get_all_employees() -> list:
+    """Получить список всех сотрудников"""
+    employees = get_table_data(config.EMPLOYEES_LIST, range1='A2', range2='D1000', position='ROWS')
+    return employees
 
 
 def check_id(telegram_id: int):
@@ -534,3 +534,19 @@ def delete_file(file_name: str):
     """удаляем файл в папке docs"""
     path = os.path.join(os.getcwd(), 'docs', file_name)
     os.remove(path)
+
+
+def get_employees_column_on_requests() -> list:
+    """Получить столбец с именами торговых представителей"""
+    employees = get_table_data(config.REQUESTS, range1='I1', range2='I20000', list_name='Все', position='COLUMNS')
+    return employees[0]
+
+
+def get_last_index_by_employee_name_in_all_requests(employee_name):
+    """Получить столбец с именами торговых представителей"""
+    employees = get_employees_column_on_requests()
+    rez = max(loc for loc, val in enumerate(employees) if val == employee_name) + 1
+    return rez
+
+
+print(get_table_range(config.REQUESTS, list_name='Мукашев Б.Ш.'))
