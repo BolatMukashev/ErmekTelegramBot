@@ -12,7 +12,7 @@ from excel_functions import new_doc
 @dp.message_handler(commands="set_commands", state="*")
 async def cmd_set_commands(message: types.Message):
     user_id = message.from_user.id
-    if user_id == config.ADMIN_ID:
+    if user_id in config.ADMINS_ID:
         commands = [types.BotCommand(command="/new_request", description="Новая заявка"),
                     types.BotCommand(command="/add_new_shop", description="Добавить торговую точку"),
                     types.BotCommand(command="/statistics", description="Показать статистику")]
@@ -25,7 +25,11 @@ async def command_start(message: types.Message):
     telegram_id = message.from_user.id
     full_name = message.from_user.full_name
     await message.answer(f'Привет, {full_name}!\nТвой Telegram ID: {telegram_id}')
-    if telegram_id == config.ADMIN_ID:
+    await message.answer('Доступные команды:\n'
+                         '/new_request - Новая заявка\n'
+                         '/add_new_shop - Добавить торговую точку\n'
+                         '/statistics - Показать статистику')
+    if telegram_id in config.ADMINS_ID:
         await message.answer('Как админу, тебе доступны команды:\n/set_commands')
 
 
@@ -34,29 +38,28 @@ async def command_statistics(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
     employee = get_employee_by_id(telegram_id)
     if employee:
-        list_names = get_lists_names_in_table(config.REQUESTS)
-        if employee['Сокращенное имя'] in list_names:
-            data = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
-            print(data)
-            all_requests_count = get_all_requests_count(data)
-            total_sum = get_all_requests_total_sum(data)
-            top_five_payable_shops_ever = get_top_five_payable_shops_ever(data)
+        try:
+            employee_requests = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
+            print(employee_requests)
+            all_requests_count = get_all_requests_count(employee_requests)
+            total_sum = get_all_requests_total_sum(employee_requests)
+            top_five_payable_shops_ever = get_top_five_payable_shops_ever(employee_requests)
 
-            requests_count_today = get_requests_count_today(data)
-            total_sum_today = get_all_requests_total_sum_today(data)
-            top_five_payable_shops_today = get_top_five_payable_shops_today(data)
+            requests_count_today = get_requests_count_today(employee_requests)
+            total_sum_today = get_all_requests_total_sum_today(employee_requests)
+            top_five_payable_shops_today = get_top_five_payable_shops_today(employee_requests)
 
-            requests_count_on_month = get_requests_count_on_this_month(data)
-            requests_total_sum_on_month = get_all_requests_total_sum_on_this_month(data)
-            top_five_payable_shops_on_this_month = get_top_five_payable_shops_on_this_month(data)
+            requests_count_on_month = get_requests_count_on_this_month(employee_requests)
+            requests_total_sum_on_month = get_all_requests_total_sum_on_this_month(employee_requests)
+            top_five_payable_shops_on_this_month = get_top_five_payable_shops_on_this_month(employee_requests)
 
-            requests_in_previous_month = get_requests_count_on_previous_month(data)
-            requests_total_sum_on_previous_month = get_all_requests_total_sum_on_previous_month(data)
-            top_five_payable_shops_on_previous_month = get_top_five_payable_shops_on_previous_month(data)
+            requests_in_previous_month = get_requests_count_on_previous_month(employee_requests)
+            requests_total_sum_on_previous_month = get_all_requests_total_sum_on_previous_month(employee_requests)
+            top_five_payable_shops_on_previous_month = get_top_five_payable_shops_on_previous_month(employee_requests)
 
-            requests_count_on_year = get_requests_count_on_this_year(data)
-            requests_total_sum_on_this_year = get_all_requests_total_sum_on_this_year(data)
-            top_five_payable_shops_on_this_year = get_top_five_payable_shops_on_this_year(data)
+            requests_count_on_year = get_requests_count_on_this_year(employee_requests)
+            requests_total_sum_on_this_year = get_all_requests_total_sum_on_this_year(employee_requests)
+            top_five_payable_shops_on_this_year = get_top_five_payable_shops_on_this_year(employee_requests)
 
             messages = [
                 ['Твоя статистика:'],
@@ -77,7 +80,10 @@ async def command_statistics(message: types.Message, state: FSMContext):
                  top_five_payable_shops_ever]
             ]
             for mes in messages:
-                await message.answer('\n'.join(mes))
+                await message.answer('\n'.join(mes), reply_markup=types.ReplyKeyboardRemove())
+                await state.finish()
+        except:
+            await message.answer('Что то пошло не так, попробуйте позже!', reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(text='🔙 Отмена', state="*")
@@ -89,8 +95,9 @@ async def text_cancel_action(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=["add_new_shop"], state="*")
 async def command_add_new_shop(message: types.Message):
     telegram_id = message.from_user.id
-    if check_id(telegram_id):
-        available_districts = get_the_districts_available_to_the_employee(telegram_id)
+    employee = get_employee_by_id(telegram_id)
+    if employee:
+        available_districts = get_the_districts_available_to_the_employee(employee)
         districts_keyboard = create_keyboard(available_districts)
         await message.answer('Чтобы добавить новую торговую точку, ответьте на несколько вопросов')
         await message.answer('В каком районе расположена торговая точка?', reply_markup=districts_keyboard)
@@ -101,7 +108,8 @@ async def command_add_new_shop(message: types.Message):
 async def command_add_new_shop_action_one(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
     district = message.text
-    available_districts = get_the_districts_available_to_the_employee(telegram_id)
+    employee = get_employee_by_id(telegram_id)
+    available_districts = get_the_districts_available_to_the_employee(employee)
     if district in available_districts:
         await state.update_data(district=district)
         await message.answer('Название торговой точки?', reply_markup=types.ReplyKeyboardRemove())
@@ -124,7 +132,8 @@ async def command_add_new_shop_action_three(message: types.Message, state: FSMCo
     official_shop_name = message.text
     official_shop_name = official_shop_name.strip()
     await state.update_data(official_shop_name=official_shop_name)
-    await message.answer('Адрес торговой точки?')
+    data = await state.get_data()
+    await message.answer(f'Адрес торговой точки в {data["district"]}?')
     await NewShop.next()
 
 
@@ -156,7 +165,7 @@ async def command_add_new_shop_action_six(message: types.Message, state: FSMCont
     if phone_number.isdigit():
         phone_number = int(phone_number)
         await state.update_data(phone_number=phone_number)
-        await message.answer('Ф.И.О. продавца?')
+        await message.answer('Ф.И.О. или просто имя продавца?')
         await NewShop.next()
     else:
         await message.answer('Это не похоже на номер телефон. Пример: 87775553322')
@@ -179,29 +188,43 @@ async def command_add_new_shop_action_final(message: types.Message, state: FSMCo
     new_shop = Shop(data['district'], data['shop_name'], data['official_shop_name'], data['address'], data['owner'],
                     data['phone_number'], data['seller_name'], data['cash_machine'])
     new_shop.add_shop()
-    await message.answer('Готово. Торговая точка была добавлена в базу!')
+    await message.answer(f"Готово!\n"
+                         f"Торговая точка:\n"
+                         f"{data['shop_name']}\n"
+                         f"{data['owner']} {data['official_shop_name']}\n"
+                         f"Адрес: {data['district']}, {data['address']}\n"
+                         f"Телефон: {data['phone_number']}\n"
+                         f"Продавец: {data['seller_name']}\n"
+                         f"Кассовый аппарат: {data['cash_machine']}\n"
+                         f"была добавлена в базу!")
     await state.finish()
 
 
 @dp.message_handler(commands=["new_request"], state="*")
-async def command_request(message: types.Message):
+async def command_request(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
-    if check_id(telegram_id):
-        available_districts = get_the_districts_available_to_the_employee(telegram_id)
+    employee = get_employee_by_id(telegram_id)
+    if employee:
+        await Request.District.set()
+        await state.update_data(employee=employee)
+        available_districts = get_the_districts_available_to_the_employee(employee)
+        await state.update_data(available_districts=available_districts)
         districts_keyboard = create_keyboard(available_districts)
         await message.answer('Выбери район:', reply_markup=districts_keyboard)
-        await Request.District.set()
 
 
 @dp.message_handler(state=Request.District, content_types=types.ContentTypes.TEXT)
 async def command_request_action_one(message: types.Message, state: FSMContext):
-    telegram_id = message.from_user.id
     district = message.text
-    available_districts = get_the_districts_available_to_the_employee(telegram_id)
+    data = await state.get_data()
+    available_districts = data['available_districts']
     if district in available_districts:
         await state.update_data(district=district)
-        shops = get_shops_name_by_district(district)
-        shops_keyboard = create_keyboard(shops)
+        all_shops = get_all_shops_in_district(district)
+        await state.update_data(all_shops=all_shops)
+        shops_names = get_shops_names(all_shops)
+        await state.update_data(shops_names=shops_names)
+        shops_keyboard = create_keyboard(shops_names)
         await message.answer(f'Выбери название торговой точки:', reply_markup=shops_keyboard)
         await Request.next()
     else:
@@ -212,11 +235,12 @@ async def command_request_action_one(message: types.Message, state: FSMContext):
 async def command_request_action_two(message: types.Message, state: FSMContext):
     shop_name = message.text
     data = await state.get_data()
-    district = data['district']
-    shops = get_shops_name_by_district(district)
-    if shop_name in shops:
-        await state.update_data(shop_name=shop_name)
+    shops_names = data['shops_names']
+    if shop_name in shops_names:
+        shop = get_shop(shop_name, data['all_shops'])
+        await state.update_data(shop=shop)
         products_types = get_products_types()
+        await state.update_data(products_types=products_types)
         products_types_keyboard = create_keyboard(products_types)
         await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
         await Request.next()
@@ -228,10 +252,12 @@ async def command_request_action_two(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Request.ProductCategory, content_types=types.ContentTypes.TEXT)
 async def command_request_action_three(message: types.Message, state: FSMContext):
     product_category = message.text
-    products_types = get_products_types()
+    data = await state.get_data()
+    products_types = data['products_types']
     if product_category in products_types:
         await state.update_data(product_category=product_category)
         products_names = get_products_names_by_type(product_category)
+        await state.update_data(products_names=products_names)
         products_names_keyboards = create_keyboard(products_names)
         await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboards)
         await Request.next()
@@ -243,8 +269,7 @@ async def command_request_action_three(message: types.Message, state: FSMContext
 async def command_request_action_four(message: types.Message, state: FSMContext):
     product = message.text
     data = await state.get_data()
-    product_category = data['product_category']
-    products_names = get_products_names_by_type(product_category)
+    products_names = data['products_names']
     if product in products_names:
         await state.update_data(product=product)
         await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
@@ -258,14 +283,13 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
     employee_text = message.text
     if employee_text.isdigit():
         telegram_id = message.from_user.id
-        employee = get_employee_by_id(telegram_id)
         data = await state.get_data()
-        shop = get_shop_by_name_and_district(data['shop_name'], data['district'])
         product = get_product_by_name(data['product'])
         product['Количество'] = int(message.text)
         product['Сумма'] = product['Цена'] * product['Количество']
         await state.update_data(product=product)
-        order_data = {'employee': employee, 'shop': shop, 'orders': [product], 'total_sum': product['Сумма']}
+        order_data = {'employee': data['employee'], 'shop': data['shop'],
+                      'orders': [product], 'total_sum': product['Сумма']}
         create_new_json_file(str(telegram_id), order_data)
         shop_data = get_shop_data_from_data(order_data)
         await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
@@ -280,20 +304,23 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
 
 
 @dp.message_handler(text='Добавить товар')
-async def text_add_product(message: types.Message):
+async def text_add_product(message: types.Message, state: FSMContext):
+    await RequestAdd.ProductCategory.set()
     products_types = get_products_types()
+    await state.update_data(products_types=products_types)
     products_types_keyboard = create_keyboard(products_types)
     await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
-    await RequestAdd.ProductCategory.set()
 
 
 @dp.message_handler(state=RequestAdd.ProductCategory, content_types=types.ContentTypes.TEXT)
 async def command_request_add_action_one(message: types.Message, state: FSMContext):
     product_category = message.text
-    products_types = get_products_types()
+    data = await state.get_data()
+    products_types = data['products_types']
     if product_category in products_types:
         await state.update_data(product_category=product_category)
         products_names = get_products_names_by_type(product_category)
+        await state.update_data(products_names=products_names)
         products_names_keyboard = create_keyboard(products_names)
         await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboard)
         await RequestAdd.next()
@@ -305,8 +332,7 @@ async def command_request_add_action_one(message: types.Message, state: FSMConte
 async def command_request_add_action_two(message: types.Message, state: FSMContext):
     product = message.text
     data = await state.get_data()
-    product_category = data['product_category']
-    products_names = get_products_names_by_type(product_category)
+    products_names = data['products_names']
     if product in products_names:
         await state.update_data(product=product)
         await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
@@ -326,7 +352,6 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
         product['Сумма'] = product['Цена'] * product['Количество']
         await state.update_data(product=product)
         order_data = get_data_from_json_file(telegram_id)
-
         products = get_products_names_from_data(order_data)
         if product['Номенклатура'] in products:
             index = get_product_index_by_name_in_data(product['Номенклатура'], order_data)
@@ -396,18 +421,17 @@ async def text_the_end(message: types.Message):
     datetime_now = time_in_uralsk()
     request_data = get_product_name_and_count_from_data(data)
     employee_name = data['employee']['Сокращенное имя']
-    request = [[request_number, datetime_now, data['shop']['Название'], data['shop']['ИП/ТОО'], data['shop']['Адрес'],
-                request_data, data['total_sum'], data['shop']['Кассовый аппарат'], employee_name, 'Принят']]
+    request = [[request_number, datetime_now, data['shop'].get('Название', 'Неизвестно'),
+                data['shop'].get('ИП/ТОО', 'Неизвестно'), data['shop'].get('Адрес', 'Неизвестно'),
+                request_data, data['total_sum'], data['shop'].get('Кассовый аппарат', 'Неизвестно'),
+                employee_name, 'Принят']]
     append_data_in_table(config.REQUESTS, list_name='Все', user_value=request)
     lists_in_table = get_lists_names_in_table(config.REQUESTS)
     if employee_name not in lists_in_table:
         create_new_list_in_table(config.REQUESTS, employee_name)
         add_base_titles_from_the_first_page_in_list(config.REQUESTS, employee_name)
     append_data_in_table(config.REQUESTS, list_name=employee_name, user_value=request)
-    last_request_index_donor = get_last_index_by_employee_name_in_all_requests(employee_name)
-    last_request_index_recipient = get_table_range(config.REQUESTS, employee_name)
-    set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
-                     employee_name, f'J{last_request_index_recipient}')
+    add_link_to_request_status(employee_name)
     uralsk_date = time_in_uralsk_date()
     new_doc(data, request_number, uralsk_date)
     file_name = f'Счет-фактура {request_number}.xlsx'

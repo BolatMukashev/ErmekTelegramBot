@@ -8,6 +8,9 @@ import pytz
 from datetime import datetime, timedelta
 
 
+# TABLES --------------------------------------------------------------------------------------------------------------
+
+
 def get_table_data(table_id: str, range1: str, range2: str, list_name: str = 'Лист1', position: str = 'ROWS'):
     """Чтение из таблицы"""
     values = service.spreadsheets().values().get(
@@ -61,33 +64,6 @@ def append_data_in_table(table_id: str, list_name: str, user_value: list, positi
     ).execute()
 
 
-def set_link_to_cell(table_id: str, donor_list: str, donor_cell: str, recipient_list: str, recipient_cell: str):
-    values = [[f'=\'{donor_list}\'!{donor_cell}']]
-    body = {'values': values}
-    service.spreadsheets().values().update(spreadsheetId=table_id, range=f'{recipient_list}!{recipient_cell}',
-                                           valueInputOption="USER_ENTERED", body=body).execute()
-
-
-def get_trusted_id() -> list:
-    """Получить TelegramID всех сотрудников"""
-    all_id = get_table_data(config.EMPLOYEES_LIST, range1='C2', range2='C10000', position='COLUMNS')
-    all_id = [int(x) for x in all_id[0]]
-    return all_id
-
-
-def get_all_employees() -> list:
-    """Получить список всех сотрудников"""
-    employees = get_table_data(config.EMPLOYEES_LIST, range1='A2', range2='D1000', position='ROWS')
-    return employees
-
-
-def check_id(telegram_id: int):
-    """Проверить есть ли этот ID в списке"""
-    all_id = get_trusted_id()
-    if telegram_id in all_id:
-        return True
-
-
 def get_lists_names_in_table(table_id: str) -> list:
     """Получить названия листов в таблице"""
     sheet_metadata = service.spreadsheets().get(spreadsheetId=table_id).execute()
@@ -102,6 +78,19 @@ def get_spreadsheet_titles(table_id: str, list_name: str = 'Лист1'):
     return titles[0]
 
 
+def set_link_to_cell(table_id: str, donor_list: str, donor_cell: str, recipient_list: str, recipient_cell: str):
+    values = [[f'=\'{donor_list}\'!{donor_cell}']]
+    body = {'values': values}
+    service.spreadsheets().values().update(spreadsheetId=table_id, range=f'{recipient_list}!{recipient_cell}',
+                                           valueInputOption="USER_ENTERED", body=body).execute()
+
+
+# EMPLOYEE ----------------------------------------------------------------------------------------------------------
+
+
+# DISTRICTS AND SHOPS ------------------------------------------------------------------------------------------------
+
+
 def get_districts():
     """Получить доступные районы"""
     data = get_table_data(config.SHOPS, 'C2', 'C10000', position='COLUMNS')
@@ -109,7 +98,7 @@ def get_districts():
     return data
 
 
-def get_all_shops_in_district(district: str):
+def get_all_shops_in_district(district: str) -> list:
     """Получить данные о магазинах в выбранном районе в "json" формате"""
     titles = get_spreadsheet_titles(config.SHOPS, list_name=district)
     data = get_table_data(config.SHOPS, 'A2', 'Z10000', list_name=district)
@@ -120,24 +109,25 @@ def get_all_shops_in_district(district: str):
     return formatted_data
 
 
-def get_shops_name_by_district(district: str) -> list:
+def get_shops_names(all_shops: list) -> list:
     """Получить названия всех магазинов в районе"""
-    shops = get_table_data(config.SHOPS, 'A2', 'A10000', list_name=district, position='COLUMNS')[0]
-    return shops
+    shops_names = []
+    for shop in all_shops:
+        shops_names.append(shop['Название'])
+    return shops_names
 
 
-def get_shop_by_name_and_district(shop_name: str, district: str):
-    """Получить данные магазина по имени и району"""
-    data = get_all_shops_in_district(district)
-    for shop in data:
-        if shop_name.strip() == shop['Название'].strip():
+def get_shop(shop_name: str, all_shops: list) -> dict:
+    """Получить магазин из списка"""
+    for shop in all_shops:
+        if shop['Название'] == shop_name:
             return shop
 
 
-def get_all_employees():
+def get_all_employees_in_json_format():
     """Получить данные о всех сотрудниках в "json" формате"""
     titles = get_spreadsheet_titles(config.EMPLOYEES_LIST)
-    data = get_table_data(config.EMPLOYEES_LIST, 'A2', 'D10000')
+    data = get_table_data(config.EMPLOYEES_LIST, 'A2', 'D1000')
     formatted_data = []
     for rows in data:
         res = {titles[idd]: value for idd, value in enumerate(rows)}
@@ -147,19 +137,38 @@ def get_all_employees():
 
 def get_employee_by_id(telegram_id: int):
     """Получить данные о сотруднике по Telegram ID"""
-    if check_id(telegram_id):
-        all_employees = get_all_employees()
-        for employee in all_employees:
-            if str(telegram_id) == employee['Telegram ID']:
-                return employee
+    all_employees = get_all_employees_in_json_format()
+    for employee in all_employees:
+        if str(telegram_id) == employee['Telegram ID']:
+            return employee
 
 
-def get_the_districts_available_to_the_employee(telegram_id: int) -> list:
+def get_the_districts_available_to_the_employee(employee: dict) -> list:
     """Получить список доступных сотруднику районов"""
-    user = get_employee_by_id(telegram_id)
-    available_districts = user['Доступные маршруты'].split(',')
+    available_districts = employee.get('Доступные маршруты').split(',')
     available_districts = [x.strip() for x in available_districts]
     return available_districts
+
+
+def get_employees_column_on_requests() -> list:
+    """Получить столбец с именами торговых представителей"""
+    employees = get_table_data(config.REQUESTS, range1='I1', range2='I20000', list_name='Все', position='COLUMNS')
+    return employees[0]
+
+
+def get_last_index_by_employee_name_in_all_requests(employee_name):
+    """Получить столбец с именами торговых представителей"""
+    employees = get_employees_column_on_requests()
+    rez = max(loc for loc, val in enumerate(employees) if val == employee_name) + 1
+    return rez
+
+
+def add_link_to_request_status(employee_name):
+    """Установить ссылку в листе заявок ТП на статус из листа Заявки Все"""
+    last_request_index_donor = get_last_index_by_employee_name_in_all_requests(employee_name)
+    last_request_index_recipient = get_table_range(config.REQUESTS, employee_name)
+    set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
+                     employee_name, f'J{last_request_index_recipient}')
 
 
 def get_all_products():
@@ -267,8 +276,9 @@ def get_product_index_by_name_in_data(product_name: str, data: dict) -> int:
 def get_shop_data_from_data(data: dict) -> list:
     """Получить данные магазниа"""
     shop = data["shop"]
-    shop_data = [shop["Название"], shop['ИП/ТОО'], shop['Адрес'],
-                 f'Тел.: {shop["Телефон"]}', f'Кассовый аппарат: {shop["Кассовый аппарат"]}']
+    shop_data = [shop.get('Название', 'Неизвестно'), shop.get('ИП/ТОО', 'Неизвестно'), shop.get('Адрес', 'Неизвестно'),
+                 f"Тел.: {shop.get('Телефон', 'Неизвестно')}",
+                 f"Кассовый аппарат: {shop.get('Кассовый аппарат', 'Неизвестно')}"]
     return shop_data
 
 
@@ -534,19 +544,3 @@ def delete_file(file_name: str):
     """удаляем файл в папке docs"""
     path = os.path.join(os.getcwd(), 'docs', file_name)
     os.remove(path)
-
-
-def get_employees_column_on_requests() -> list:
-    """Получить столбец с именами торговых представителей"""
-    employees = get_table_data(config.REQUESTS, range1='I1', range2='I20000', list_name='Все', position='COLUMNS')
-    return employees[0]
-
-
-def get_last_index_by_employee_name_in_all_requests(employee_name):
-    """Получить столбец с именами торговых представителей"""
-    employees = get_employees_column_on_requests()
-    rez = max(loc for loc, val in enumerate(employees) if val == employee_name) + 1
-    return rez
-
-
-print(get_table_range(config.REQUESTS, list_name='Мукашев Б.Ш.'))
