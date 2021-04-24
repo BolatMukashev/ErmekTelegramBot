@@ -110,6 +110,14 @@ def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
         update_data_in_table(table_id, user_list, 'A1', [titles])
 
 
+def update_one_cell(table_id: str, list_name: str, cell_id: str, new_value: [int, str]):
+    """Изменить данные в одной ячейке"""
+    values = [[f'{new_value}']]
+    body = {'values': values}
+    service.spreadsheets().values().update(spreadsheetId=table_id, range=f'{list_name}!{cell_id}',
+                                           valueInputOption="USER_ENTERED", body=body).execute()
+
+
 # DISTRICTS AND SHOPS ------------------------------------------------------------------------------------------------
 
 
@@ -196,6 +204,9 @@ def add_link_to_request_status(employee_name):
                      employee_name, f'J{last_request_index_recipient}')
 
 
+# PRODUCT ------------------------------------------------------------------------------------------------------------
+
+
 def get_all_products() -> list:
     """Получить данные о всех продуктах в "json" формате"""
     titles = get_spreadsheet_titles(config.PRODUCTS)
@@ -221,7 +232,7 @@ def get_products_names_by_type(all_products: list, product_type: str) -> list:
     """Получить названия всех продуктов по типу продукта"""
     result = []
     for product in all_products:
-        if product['Категория товара'] == product_type and product['Наличие'] == 'Да':
+        if product['Категория товара'] == product_type and int(float(product['Количество'])) > 0:
             result.append(product['Номенклатура'])
     return result
 
@@ -231,6 +242,21 @@ def get_product(all_products: list, product_name: str) -> dict:
     for product in all_products:
         if product['Номенклатура'] == product_name:
             return product
+
+
+def get_product_index(all_products: list, product_name: str) -> int:
+    """Получить номер продукта по названию"""
+    for idd, product in enumerate(all_products):
+        if product['Номенклатура'] == product_name:
+            return idd + 2
+
+
+def convert_product_quantity_to_reserve(all_products: list, product_name: str, quantity: int):
+    """Убрать некое количество товара в резерв"""
+    product_index = get_product_index(all_products, product_name)
+    product = get_product(all_products, product_name)
+    update_one_cell(config.PRODUCTS, 'Лист1', f'F{product_index}', int(float(product['Количество'])) - quantity)
+    update_one_cell(config.PRODUCTS, 'Лист1', f'G{product_index}', int(float(product['Резерв'])) + quantity)
 
 
 # JSON DATA ----------------------------------------------------------------------------------------------------------

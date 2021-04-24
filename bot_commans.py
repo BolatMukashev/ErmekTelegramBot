@@ -272,7 +272,11 @@ async def command_request_action_four(message: types.Message, state: FSMContext)
     products_names = data['products_names']
     if product_name in products_names:
         await state.update_data(product_name=product_name)
-        await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
+        product = get_product(data['all_products'], product_name)
+        await state.update_data(product=product)
+        max_number_of_product = product['Количество']
+        await message.answer(f'Количество (доступно {max_number_of_product}):',
+                             reply_markup=types.ReplyKeyboardRemove())
         await Request.next()
     else:
         await message.answer('Выберите из предложенных, или обратитесь в офис')
@@ -282,23 +286,28 @@ async def command_request_action_four(message: types.Message, state: FSMContext)
 async def command_request_action_five(message: types.Message, state: FSMContext):
     number_of_products = message.text
     if number_of_products.isdigit():
-        telegram_id = message.from_user.id
         data = await state.get_data()
-        product = get_product(data['all_products'], data['product_name'])
-        product['Количество'] = int(number_of_products)
-        product['Сумма'] = product['Цена'] * product['Количество']
-        await state.update_data(product=product)
-        order_data = {'employee': data['employee'], 'shop': data['shop'],
-                      'orders': [product], 'total_sum': product['Сумма']}
-        create_new_json_file(str(telegram_id), order_data)
-        shop_data = get_shop_data_from_data(order_data)
-        await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
-        product_data = get_product_data_from_data(order_data)
-        for product in product_data:
-            await message.answer('\n'.join(product))
-        await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
-        await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
-        await state.finish()
+        product = data['product']
+        if int(number_of_products) <= int(product['Количество']):
+            telegram_id = message.from_user.id
+            product['Количество'] = int(number_of_products)
+            product['Сумма'] = product['Цена'] * product['Количество']
+            await state.update_data(product=product)
+            order_data = {'employee': data['employee'], 'shop': data['shop'],
+                          'orders': [product], 'total_sum': product['Сумма']}
+            create_new_json_file(str(telegram_id), order_data)
+            shop_data = get_shop_data_from_data(order_data)
+            convert_product_quantity_to_reserve(data['all_products'], data['product_name'], int(number_of_products))
+            await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
+            product_data = get_product_data_from_data(order_data)
+            for product in product_data:
+                await message.answer('\n'.join(product))
+            await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
+            await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
+            await state.finish()
+        else:
+            await message.answer(f'У нас столько нет!\n'
+                                 f'Доступно только {product["Количество"]} единиц товара.')
     else:
         await message.answer(f'Это не число!')
 
