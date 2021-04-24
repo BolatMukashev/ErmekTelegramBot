@@ -85,7 +85,29 @@ def set_link_to_cell(table_id: str, donor_list: str, donor_cell: str, recipient_
                                            valueInputOption="USER_ENTERED", body=body).execute()
 
 
-# EMPLOYEE ----------------------------------------------------------------------------------------------------------
+def create_new_list_in_table(table_id: str, list_name: str):
+    """Создать новый лист в таблице"""
+    requests = [{'addSheet': {'properties': {'title': list_name}}}]
+    body = {'requests': requests}
+    try:
+        service.spreadsheets().batchUpdate(spreadsheetId=table_id, body=body).execute()
+    except:
+        print('Такой лист уже существует')
+
+
+def add_base_titles_from_the_first_page_in_list(table_id: str, list_name: str):
+    """Добавить заголовки из первой страицы в нужную страницу"""
+    list_names = get_lists_names_in_table(table_id)
+    titles = get_spreadsheet_titles(table_id, list_names[0])
+    update_data_in_table(table_id, list_name, 'A1', [titles])
+
+
+def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
+    """Добавить заголовки из первой страицы во все страницы"""
+    list_names = get_lists_names_in_table(table_id)
+    titles = get_spreadsheet_titles(table_id, list_names[0])
+    for user_list in list_names:
+        update_data_in_table(table_id, user_list, 'A1', [titles])
 
 
 # DISTRICTS AND SHOPS ------------------------------------------------------------------------------------------------
@@ -122,6 +144,9 @@ def get_shop(shop_name: str, all_shops: list) -> dict:
     for shop in all_shops:
         if shop['Название'] == shop_name:
             return shop
+
+
+# EMPLOYEE ----------------------------------------------------------------------------------------------------------
 
 
 def get_all_employees_in_json_format():
@@ -171,7 +196,7 @@ def add_link_to_request_status(employee_name):
                      employee_name, f'J{last_request_index_recipient}')
 
 
-def get_all_products():
+def get_all_products() -> list:
     """Получить данные о всех продуктах в "json" формате"""
     titles = get_spreadsheet_titles(config.PRODUCTS)
     data = get_table_data(config.PRODUCTS, 'A2', 'Z10000')
@@ -183,19 +208,17 @@ def get_all_products():
     return formatted_data
 
 
-def get_products_types():
+def get_products_types(all_products: list) -> list:
     """Получить все виды продуктов"""
-    all_products = get_all_products()
     result = []
     for product in all_products:
-        result.append(product['Категория товара'])
+        result.append(product.get('Категория товара', 'Без категории'))
     result = sorted(list(set(result)))
     return result
 
 
-def get_products_names_by_type(product_type):
+def get_products_names_by_type(all_products: list, product_type: str) -> list:
     """Получить названия всех продуктов по типу продукта"""
-    all_products = get_all_products()
     result = []
     for product in all_products:
         if product['Категория товара'] == product_type and product['Наличие'] == 'Да':
@@ -203,59 +226,14 @@ def get_products_names_by_type(product_type):
     return result
 
 
-def get_product_by_name(product_name):
+def get_product(all_products: list, product_name: str) -> dict:
     """Получить продукт по названию"""
-    all_products = get_all_products()
     for product in all_products:
         if product['Номенклатура'] == product_name:
             return product
 
 
-def create_new_list_in_table(table_id: str, list_name: str):
-    """Создать новый лист в таблице"""
-    requests = [{'addSheet': {'properties': {'title': list_name}}}]
-    body = {'requests': requests}
-    try:
-        service.spreadsheets().batchUpdate(spreadsheetId=table_id, body=body).execute()
-    except:
-        print('Такой лист уже существует')
-
-
-def add_base_titles_from_the_first_page_in_list(table_id: str, list_name: str):
-    """Добавить заголовки из первой страицы в нужную страницу"""
-    list_names = get_lists_names_in_table(table_id)
-    titles = get_spreadsheet_titles(table_id, list_names[0])
-    update_data_in_table(table_id, list_name, 'A1', [titles])
-
-
-def add_base_titles_from_the_first_page_in_all_pages(table_id: str):
-    """Добавить заголовки из первой страицы во все страницы"""
-    list_names = get_lists_names_in_table(table_id)
-    titles = get_spreadsheet_titles(table_id, list_names[0])
-    for user_list in list_names:
-        update_data_in_table(table_id, user_list, 'A1', [titles])
-
-
-def create_new_json_file(telegram_id: Union[str, int], order_data: dict):
-    """Создаем файл заказа, basic_structure = {'employee': {}, 'shop': {}, 'orders': [], 'total_sum' : 0}"""
-    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
-    with open(path, 'w', encoding='utf-8') as json_file:
-        json.dump(order_data, json_file, ensure_ascii=False, default=str)
-
-
-def get_data_from_json_file(telegram_id: Union[str, int]) -> dict:
-    """Получить данные из json файла"""
-    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
-    with open(path, 'r', encoding='utf-8') as json_file:
-        data = json.load(json_file)
-        return data
-
-
-def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
-    """Изменить данные в json файле"""
-    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
-    with open(path, 'w', encoding='utf-8') as json_file:
-        json.dump(new_data, json_file, ensure_ascii=False)
+# JSON DATA ----------------------------------------------------------------------------------------------------------
 
 
 def get_products_names_from_data(data: dict) -> list:
@@ -309,6 +287,9 @@ def get_last_number_in_requests() -> int:
     numbers = get_table_data(config.REQUESTS, 'A2', 'A20000', list_name='Все', position='COLUMNS')
     last_number = int(numbers[0][-1])
     return last_number
+
+
+# TIME ---------------------------------------------------------------------------------------------------------------
 
 
 def time_in_uralsk_origin() -> datetime:
@@ -544,3 +525,25 @@ def delete_file(file_name: str):
     """удаляем файл в папке docs"""
     path = os.path.join(os.getcwd(), 'docs', file_name)
     os.remove(path)
+
+
+def create_new_json_file(telegram_id: Union[str, int], order_data: dict):
+    """Создаем файл заказа, basic_structure = {'employee': {}, 'shop': {}, 'orders': [], 'total_sum' : 0}"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'w', encoding='utf-8') as json_file:
+        json.dump(order_data, json_file, ensure_ascii=False, default=str)
+
+
+def get_data_from_json_file(telegram_id: Union[str, int]) -> dict:
+    """Получить данные из json файла"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'r', encoding='utf-8') as json_file:
+        data = json.load(json_file)
+        return data
+
+
+def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
+    """Изменить данные в json файле"""
+    path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    with open(path, 'w', encoding='utf-8') as json_file:
+        json.dump(new_data, json_file, ensure_ascii=False)

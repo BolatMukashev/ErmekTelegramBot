@@ -40,7 +40,6 @@ async def command_statistics(message: types.Message, state: FSMContext):
     if employee:
         try:
             employee_requests = get_table_data(config.REQUESTS, 'A2', 'Z10000', list_name=employee['Сокращенное имя'])
-            print(employee_requests)
             all_requests_count = get_all_requests_count(employee_requests)
             total_sum = get_all_requests_total_sum(employee_requests)
             top_five_payable_shops_ever = get_top_five_payable_shops_ever(employee_requests)
@@ -189,14 +188,13 @@ async def command_add_new_shop_action_final(message: types.Message, state: FSMCo
                     data['phone_number'], data['seller_name'], data['cash_machine'])
     new_shop.add_shop()
     await message.answer(f"Готово!\n"
-                         f"Торговая точка:\n"
+                         f"Торговая точка была добавлена в базу!\n\n"
                          f"{data['shop_name']}\n"
                          f"{data['owner']} {data['official_shop_name']}\n"
                          f"Адрес: {data['district']}, {data['address']}\n"
                          f"Телефон: {data['phone_number']}\n"
                          f"Продавец: {data['seller_name']}\n"
-                         f"Кассовый аппарат: {data['cash_machine']}\n"
-                         f"была добавлена в базу!")
+                         f"Кассовый аппарат: {data['cash_machine']}")
     await state.finish()
 
 
@@ -239,7 +237,9 @@ async def command_request_action_two(message: types.Message, state: FSMContext):
     if shop_name in shops_names:
         shop = get_shop(shop_name, data['all_shops'])
         await state.update_data(shop=shop)
-        products_types = get_products_types()
+        all_products = get_all_products()
+        await state.update_data(all_products=all_products)
+        products_types = get_products_types(all_products)
         await state.update_data(products_types=products_types)
         products_types_keyboard = create_keyboard(products_types)
         await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
@@ -251,12 +251,12 @@ async def command_request_action_two(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Request.ProductCategory, content_types=types.ContentTypes.TEXT)
 async def command_request_action_three(message: types.Message, state: FSMContext):
-    product_category = message.text
+    product_type = message.text
     data = await state.get_data()
     products_types = data['products_types']
-    if product_category in products_types:
-        await state.update_data(product_category=product_category)
-        products_names = get_products_names_by_type(product_category)
+    if product_type in products_types:
+        await state.update_data(product_type=product_type)
+        products_names = get_products_names_by_type(data['all_products'], product_type)
         await state.update_data(products_names=products_names)
         products_names_keyboards = create_keyboard(products_names)
         await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboards)
@@ -267,11 +267,11 @@ async def command_request_action_three(message: types.Message, state: FSMContext
 
 @dp.message_handler(state=Request.Product, content_types=types.ContentTypes.TEXT)
 async def command_request_action_four(message: types.Message, state: FSMContext):
-    product = message.text
+    product_name = message.text
     data = await state.get_data()
     products_names = data['products_names']
-    if product in products_names:
-        await state.update_data(product=product)
+    if product_name in products_names:
+        await state.update_data(product_name=product_name)
         await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
         await Request.next()
     else:
@@ -280,12 +280,12 @@ async def command_request_action_four(message: types.Message, state: FSMContext)
 
 @dp.message_handler(state=Request.Number, content_types=types.ContentTypes.TEXT)
 async def command_request_action_five(message: types.Message, state: FSMContext):
-    employee_text = message.text
-    if employee_text.isdigit():
+    number_of_products = message.text
+    if number_of_products.isdigit():
         telegram_id = message.from_user.id
         data = await state.get_data()
-        product = get_product_by_name(data['product'])
-        product['Количество'] = int(message.text)
+        product = get_product(data['all_products'], data['product_name'])
+        product['Количество'] = int(number_of_products)
         product['Сумма'] = product['Цена'] * product['Количество']
         await state.update_data(product=product)
         order_data = {'employee': data['employee'], 'shop': data['shop'],
@@ -306,7 +306,9 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
 @dp.message_handler(text='Добавить товар')
 async def text_add_product(message: types.Message, state: FSMContext):
     await RequestAdd.ProductCategory.set()
-    products_types = get_products_types()
+    all_products = get_all_products()
+    await state.update_data(all_products=all_products)
+    products_types = get_products_types(all_products)
     await state.update_data(products_types=products_types)
     products_types_keyboard = create_keyboard(products_types)
     await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
@@ -314,12 +316,12 @@ async def text_add_product(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=RequestAdd.ProductCategory, content_types=types.ContentTypes.TEXT)
 async def command_request_add_action_one(message: types.Message, state: FSMContext):
-    product_category = message.text
+    product_type = message.text
     data = await state.get_data()
     products_types = data['products_types']
-    if product_category in products_types:
-        await state.update_data(product_category=product_category)
-        products_names = get_products_names_by_type(product_category)
+    if product_type in products_types:
+        await state.update_data(product_type=product_type)
+        products_names = get_products_names_by_type(data['all_products'], product_type)
         await state.update_data(products_names=products_names)
         products_names_keyboard = create_keyboard(products_names)
         await message.answer(f'Выбери товар: ', reply_markup=products_names_keyboard)
@@ -330,11 +332,11 @@ async def command_request_add_action_one(message: types.Message, state: FSMConte
 
 @dp.message_handler(state=RequestAdd.Product, content_types=types.ContentTypes.TEXT)
 async def command_request_add_action_two(message: types.Message, state: FSMContext):
-    product = message.text
+    product_name = message.text
     data = await state.get_data()
     products_names = data['products_names']
-    if product in products_names:
-        await state.update_data(product=product)
+    if product_name in products_names:
+        await state.update_data(product_name=product_name)
         await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
         await RequestAdd.next()
     else:
@@ -343,12 +345,12 @@ async def command_request_add_action_two(message: types.Message, state: FSMConte
 
 @dp.message_handler(state=RequestAdd.Number, content_types=types.ContentTypes.TEXT)
 async def command_request_add_action_three(message: types.Message, state: FSMContext):
-    employee_text = message.text
-    if employee_text.isdigit():
+    number_of_products = message.text
+    if number_of_products.isdigit():
         telegram_id = message.from_user.id
         data = await state.get_data()
-        product = get_product_by_name(data['product'])
-        product['Количество'] = int(message.text)
+        product = get_product(data['all_products'], data['product_name'])
+        product['Количество'] = int(number_of_products)
         product['Сумма'] = product['Цена'] * product['Количество']
         await state.update_data(product=product)
         order_data = get_data_from_json_file(telegram_id)
