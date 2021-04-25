@@ -259,6 +259,14 @@ def convert_product_quantity_to_reserve(all_products: list, product_name: str, q
     update_one_cell(config.PRODUCTS, 'Лист1', f'G{product_index}', int(float(product['Резерв'])) + quantity)
 
 
+def convert_product_in_reserve_to_quantity(all_products: list, product_name: str, quantity: int):
+    """Вернуть некое количество товара из резерва"""
+    product_index = get_product_index(all_products, product_name)
+    product = get_product(all_products, product_name)
+    update_one_cell(config.PRODUCTS, 'Лист1', f'F{product_index}', int(float(product['Количество'])) + quantity)
+    update_one_cell(config.PRODUCTS, 'Лист1', f'G{product_index}', int(float(product['Резерв'])) - quantity)
+
+
 # JSON DATA ----------------------------------------------------------------------------------------------------------
 
 

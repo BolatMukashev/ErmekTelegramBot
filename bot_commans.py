@@ -5,6 +5,7 @@ from aiogram.dispatcher import FSMContext
 from keyboards.next_chioce import next_choice_buttons
 from keyboards.generated_keyboard import create_keyboard
 from keyboards.owner import owner_buttons
+from keyboards.back import back_button
 from models import Shop
 from excel_functions import new_doc
 
@@ -87,6 +88,15 @@ async def command_statistics(message: types.Message, state: FSMContext):
 
 @dp.message_handler(text='🔙 Отмена', state="*")
 async def text_cancel_action(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    data = get_data_from_json_file(telegram_id)
+    for order in data['orders']:
+        product_name = order['Номенклатура']
+        number_of_product = order['Количество']
+        all_products = get_all_products()
+        convert_product_in_reserve_to_quantity(all_products, product_name, number_of_product)
+        order['Количество'] = 0
+    edit_data_in_json_file(telegram_id, data)
     await message.answer('Действие отменено', reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
 
@@ -276,7 +286,7 @@ async def command_request_action_four(message: types.Message, state: FSMContext)
         await state.update_data(product=product)
         max_number_of_product = product['Количество']
         await message.answer(f'Количество (доступно {max_number_of_product}):',
-                             reply_markup=types.ReplyKeyboardRemove())
+                             reply_markup=back_button)
         await Request.next()
     else:
         await message.answer('Выберите из предложенных, или обратитесь в офис')
@@ -284,20 +294,26 @@ async def command_request_action_four(message: types.Message, state: FSMContext)
 
 @dp.message_handler(state=Request.Number, content_types=types.ContentTypes.TEXT)
 async def command_request_action_five(message: types.Message, state: FSMContext):
-    number_of_products = message.text
+    number_of_products = message.text.replace(' ', '')
+    if number_of_products == 'Назад' or int(number_of_products) == 0:
+        data = await state.get_data()
+        products_types_keyboard = create_keyboard(data['products_types'])
+        await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
+        await Request.ProductCategory.set()
+        return
     if number_of_products.isdigit():
         data = await state.get_data()
         product = data['product']
         if int(number_of_products) <= int(product['Количество']):
-            telegram_id = message.from_user.id
             product['Количество'] = int(number_of_products)
             product['Сумма'] = product['Цена'] * product['Количество']
             await state.update_data(product=product)
             order_data = {'employee': data['employee'], 'shop': data['shop'],
                           'orders': [product], 'total_sum': product['Сумма']}
+            telegram_id = message.from_user.id
             create_new_json_file(str(telegram_id), order_data)
-            shop_data = get_shop_data_from_data(order_data)
             convert_product_quantity_to_reserve(data['all_products'], data['product_name'], int(number_of_products))
+            shop_data = get_shop_data_from_data(order_data)
             await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
             product_data = get_product_data_from_data(order_data)
             for product in product_data:
@@ -346,7 +362,11 @@ async def command_request_add_action_two(message: types.Message, state: FSMConte
     products_names = data['products_names']
     if product_name in products_names:
         await state.update_data(product_name=product_name)
-        await message.answer(f'Количество:', reply_markup=types.ReplyKeyboardRemove())
+        product = get_product(data['all_products'], product_name)
+        await state.update_data(product=product)
+        max_number_of_product = product['Количество']
+        await message.answer(f'Количество (доступно {max_number_of_product}):',
+                             reply_markup=back_button)
         await RequestAdd.next()
     else:
         await message.answer('Выберите из предложенных, или обратитесь в офис')
@@ -354,32 +374,43 @@ async def command_request_add_action_two(message: types.Message, state: FSMConte
 
 @dp.message_handler(state=RequestAdd.Number, content_types=types.ContentTypes.TEXT)
 async def command_request_add_action_three(message: types.Message, state: FSMContext):
-    number_of_products = message.text
-    if number_of_products.isdigit():
-        telegram_id = message.from_user.id
+    number_of_products = message.text.replace(' ', '')
+    if number_of_products == 'Назад' or int(number_of_products) == 0:
         data = await state.get_data()
-        product = get_product(data['all_products'], data['product_name'])
-        product['Количество'] = int(number_of_products)
-        product['Сумма'] = product['Цена'] * product['Количество']
-        await state.update_data(product=product)
-        order_data = get_data_from_json_file(telegram_id)
-        products = get_products_names_from_data(order_data)
-        if product['Номенклатура'] in products:
-            index = get_product_index_by_name_in_data(product['Номенклатура'], order_data)
-            order_data['orders'][index]['Количество'] += product['Количество']
-            order_data['orders'][index]['Сумма'] += product['Сумма']
+        products_types_keyboard = create_keyboard(data['products_types'])
+        await message.answer(f'Выбери категорию товара: ', reply_markup=products_types_keyboard)
+        await RequestAdd.ProductCategory.set()
+        return
+    if number_of_products.isdigit():
+        data = await state.get_data()
+        product = data['product']
+        if int(number_of_products) <= int(product['Количество']):
+            product['Количество'] = int(number_of_products)
+            product['Сумма'] = product['Цена'] * product['Количество']
+            await state.update_data(product=product)
+            telegram_id = message.from_user.id
+            order_data = get_data_from_json_file(telegram_id)
+            products = get_products_names_from_data(order_data)
+            if product['Номенклатура'] in products:
+                index = get_product_index_by_name_in_data(product['Номенклатура'], order_data)
+                order_data['orders'][index]['Количество'] += product['Количество']
+                order_data['orders'][index]['Сумма'] += product['Сумма']
+            else:
+                order_data['orders'].append(product)
+            order_data['total_sum'] += product['Сумма']
+            edit_data_in_json_file(telegram_id, order_data)
+            convert_product_quantity_to_reserve(data['all_products'], data['product_name'], int(number_of_products))
+            shop_data = get_shop_data_from_data(order_data)
+            await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
+            product_data = get_product_data_from_data(order_data)
+            for product in product_data:
+                await message.answer('\n'.join(product))
+            await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
+            await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
+            await state.finish()
         else:
-            order_data['orders'].append(product)
-        order_data['total_sum'] += product['Сумма']
-        edit_data_in_json_file(telegram_id, order_data)
-        shop_data = get_shop_data_from_data(order_data)
-        await message.answer(f'Торговая точка:\n{", ".join(shop_data)}')
-        product_data = get_product_data_from_data(order_data)
-        for product in product_data:
-            await message.answer('\n'.join(product))
-        await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
-        await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
-        await state.finish()
+            await message.answer(f'У нас столько нет!\n'
+                                 f'Доступно только {product["Количество"]} единиц товара.')
     else:
         await message.answer(f'Это не число!')
 
@@ -410,6 +441,9 @@ async def text_delete_product_action(message: types.Message, state: FSMContext):
         product_index = get_product_index_by_name_in_data(answer, data)
         if product_index is not None:
             data['total_sum'] -= data['orders'][product_index]['Сумма']
+            number_of_product = data['orders'][product_index]['Количество']
+            all_products = get_all_products()
+            convert_product_in_reserve_to_quantity(all_products, answer, number_of_product)
             del data['orders'][product_index]
             edit_data_in_json_file(telegram_id, data)
             shop_data = get_shop_data_from_data(data)
