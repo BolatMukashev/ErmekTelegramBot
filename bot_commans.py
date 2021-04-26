@@ -89,7 +89,12 @@ async def command_statistics(message: types.Message, state: FSMContext):
 @dp.message_handler(text='🔙 Отмена', state="*")
 async def text_cancel_action(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
-    data = get_data_from_json_file(telegram_id)
+    try:
+        data = get_data_from_json_file(telegram_id)
+    except FileNotFoundError:
+        await message.answer('Действие отменено', reply_markup=types.ReplyKeyboardRemove())
+        await state.finish()
+        return
     for order in data['orders']:
         product_name = order['Номенклатура']
         number_of_product = order['Количество']
@@ -330,6 +335,13 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
 
 @dp.message_handler(text='Добавить товар')
 async def text_add_product(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    try:
+        get_data_from_json_file(telegram_id)
+    except FileNotFoundError:
+        await message.answer('Что то пошло не так. Попробуйте заново: /new_request',
+                             reply_markup=types.ReplyKeyboardRemove())
+        return
     await RequestAdd.ProductCategory.set()
     all_products = get_all_products()
     await state.update_data(all_products=all_products)
@@ -418,7 +430,12 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
 @dp.message_handler(text='Удалить товар')
 async def text_delete_product(message: types.Message):
     telegram_id = message.from_user.id
-    orders = get_data_from_json_file(telegram_id)["orders"]
+    try:
+        orders = get_data_from_json_file(telegram_id)["orders"]
+    except FileNotFoundError:
+        await message.answer('Что то пошло не так. Попробуйте заново: /new_request',
+                             reply_markup=types.ReplyKeyboardRemove())
+        return
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     for order in orders:
         button = types.KeyboardButton(order['Номенклатура'])
@@ -461,7 +478,12 @@ async def text_delete_product_action(message: types.Message, state: FSMContext):
 @dp.message_handler(text='Завершить 📄')
 async def text_the_end(message: types.Message):
     telegram_id = message.from_user.id
-    data = get_data_from_json_file(telegram_id)
+    try:
+        data = get_data_from_json_file(telegram_id)
+    except FileNotFoundError:
+        await message.answer('Что то пошло не так. Попробуйте заново: /new_request',
+                             reply_markup=types.ReplyKeyboardRemove())
+        return
     request_number = get_last_number_in_requests() + 1
     datetime_now = time_in_uralsk()
     request_data = get_product_name_and_count_from_data(data)
@@ -486,6 +508,8 @@ async def text_the_end(message: types.Message):
             delete_file(file_name)
     except:
         pass
+    finally:
+        delete_json_file(telegram_id)
     await message.answer('Заявка была принята!', reply_markup=types.ReplyKeyboardRemove())
 
 

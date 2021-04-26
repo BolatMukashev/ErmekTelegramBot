@@ -557,8 +557,8 @@ def get_top_five_payable_shops_on_this_year(data: list) -> str:
 
 def delete_file(file_name: str):
     """удаляем файл в папке docs"""
-    path = os.path.join(os.getcwd(), 'docs', file_name)
-    os.remove(path)
+    file = os.path.join(os.getcwd(), 'docs', file_name)
+    os.remove(file)
 
 
 def create_new_json_file(telegram_id: Union[str, int], order_data: dict):
@@ -581,3 +581,9 @@ def edit_data_in_json_file(telegram_id: Union[str, int], new_data: dict):
     path = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
     with open(path, 'w', encoding='utf-8') as json_file:
         json.dump(new_data, json_file, ensure_ascii=False)
+
+
+def delete_json_file(telegram_id: Union[str, int]):
+    """Удалить json файл"""
+    file = os.path.join(os.getcwd(), 'employee_operations', f'{telegram_id}.json')
+    os.remove(file)
