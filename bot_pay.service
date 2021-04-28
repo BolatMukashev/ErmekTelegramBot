@@ -1,0 +1,13 @@
+[Unit]
+Description=ErmekTelegramBot
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/ErmekTelegramBot
+Environment="PYTHONPATH=/home/ubuntu/ErmekTelegramBot"
+ExecStart=/home/ubuntu/ErmekTelegramBot/.venv/bin/python3 /home/ubuntu/ErmekTelegramBot/bot.py
+
+[Install]
+WantedBy=multi-user.target
