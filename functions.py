@@ -6,6 +6,7 @@ import json
 from typing import Union
 import pytz
 from datetime import datetime, timedelta
+import re
 
 
 # TABLES --------------------------------------------------------------------------------------------------------------
@@ -129,13 +130,9 @@ def get_districts():
 
 
 def get_all_shops_in_district(district: str) -> list:
-    """Получить данные о магазинах в выбранном районе в "json" формате"""
-    titles = get_spreadsheet_titles(config.SHOPS, list_name=district)
-    data = get_table_data(config.SHOPS, 'A2', 'Z10000', list_name=district)
-    formatted_data = []
-    for rows in data:
-        res = {titles[idd]: value for idd, value in enumerate(rows)}
-        formatted_data.append(res)
+    """Получить данные о магазинах в выбранном районе в JSON формате"""
+    data = get_table_data(config.SHOPS, 'A1', 'Z10000', list_name=district)
+    formatted_data = convert_data_from_sheet_to_json_format(data)
     return formatted_data
 
 
@@ -157,18 +154,14 @@ def get_shop(shop_name: str, all_shops: list) -> dict:
 # EMPLOYEE ----------------------------------------------------------------------------------------------------------
 
 
-def get_all_employees_in_json_format():
-    """Получить данные о всех сотрудниках в "json" формате"""
-    titles = get_spreadsheet_titles(config.EMPLOYEES_LIST)
-    data = get_table_data(config.EMPLOYEES_LIST, 'A2', 'D1000')
-    formatted_data = []
-    for rows in data:
-        res = {titles[idd]: value for idd, value in enumerate(rows)}
-        formatted_data.append(res)
+def get_all_employees_in_json_format() -> list:
+    """Получить данные о всех сотрудниках в JSON формате"""
+    data = get_table_data(config.EMPLOYEES_LIST, 'A1', 'D1000')
+    formatted_data = convert_data_from_sheet_to_json_format(data)
     return formatted_data
 
 
-def get_employee_by_id(telegram_id: int):
+def get_employee_by_id(telegram_id: int) -> dict:
     """Получить данные о сотруднике по Telegram ID"""
     all_employees = get_all_employees_in_json_format()
     for employee in all_employees:
@@ -190,32 +183,49 @@ def get_employees_column_on_requests() -> list:
 
 
 def get_last_index_by_employee_name_in_all_requests(employee_name):
-    """Получить столбец с именами торговых представителей"""
+    """Получить индекс строки с последним заказом по имени торгового представителя"""
     employees = get_employees_column_on_requests()
     rez = max(loc for loc, val in enumerate(employees) if val == employee_name) + 1
     return rez
 
 
 def add_link_to_request_status(employee_name):
-    """Установить ссылку в листе заявок ТП на статус из листа Заявки Все"""
+    """Установить ссылку в листе заявок ТП на статус из листа Заявки -> Все"""
     last_request_index_donor = get_last_index_by_employee_name_in_all_requests(employee_name)
     last_request_index_recipient = get_table_range(config.REQUESTS, employee_name)
     set_link_to_cell(config.REQUESTS, 'Все', f'J{last_request_index_donor}',
                      employee_name, f'J{last_request_index_recipient}')
 
 
+def get_employee_requests(employee: dict) -> list:
+    """Получить данные о всех заявках пользователя в JSON формате"""
+    data = get_table_data(config.REQUESTS, 'A1', 'Z10000', list_name=employee['Сокращенное имя'])
+    formatted_data = convert_data_from_sheet_to_json_format(data)
+    return formatted_data
+
+
+def get_accepted_requests(requests: list) -> list:
+    """Отфильтровать заявки по статусу Принят"""
+    accepted_requests = [request for request in requests if request['Статус'] == 'Принят']
+    return accepted_requests
+
+
+def get_datetime_and_shop_names_by_request(requests: list) -> list:
+    """Вернуть только дату/время и название заявок"""
+    accepted_requests_names = []
+    for request in requests:
+        request_datetime_and_name = f'{request["Дата и время"]} {request["Название"]}'
+        accepted_requests_names.append(request_datetime_and_name)
+    return accepted_requests_names
+
+
 # PRODUCT ------------------------------------------------------------------------------------------------------------
 
 
 def get_all_products() -> list:
-    """Получить данные о всех продуктах в "json" формате"""
-    titles = get_spreadsheet_titles(config.PRODUCTS)
-    data = get_table_data(config.PRODUCTS, 'A2', 'Z10000')
-    formatted_data = []
-    for rows in data:
-        res = {titles[idd]: value for idd, value in enumerate(rows)}
-        res['Цена'] = int(float(res['Цена'].replace(',', '.')))
-        formatted_data.append(res)
+    """Получить данные о всех продуктах в JSON формате"""
+    data = get_table_data(config.PRODUCTS, 'A1', 'Z10000')
+    formatted_data = convert_data_from_sheet_to_json_format(data)
     return formatted_data
 
 
@@ -299,8 +309,9 @@ def get_product_data_from_data(data: dict) -> list:
     orders = data["orders"]
     products_list = []
     for product in orders:
+        product_price = int(float(product["Цена"].replace(',', '.')))
         product_data = ['Заявка:', product['Номенклатура'], f'Количество: {product["Количество"]}',
-                        f'Цена: {int(product["Цена"])} тг', f'Сумма: {int(product["Сумма"])} тг']
+                        f'Цена: {product_price} тг', f'Сумма: {product["Сумма"]} тг']
         products_list.append(product_data)
     return products_list
 
@@ -321,6 +332,46 @@ def get_last_number_in_requests() -> int:
     numbers = get_table_data(config.REQUESTS, 'A2', 'A20000', list_name='Все', position='COLUMNS')
     last_number = int(numbers[0][-1])
     return last_number
+
+
+def convert_data_from_sheet_to_json_format(data: list) -> list:
+    """Конвертировать данные полученные из листа таблицы в JSON формат"""
+    titles = data.pop(0)
+    formatted_data = []
+    for rows in data:
+        res = {titles[idd]: value for idd, value in enumerate(rows)}
+        formatted_data.append(res)
+    return formatted_data
+
+
+# REQUESTS -----------------------------------------------------------------------------------------------------------
+
+
+def get_all_requests() -> list:
+    """Получить данные о всех заказах в JSON формате"""
+    data = get_table_data(config.REQUESTS, 'A1', 'Z20000', list_name='Все')
+    formatted_data = convert_data_from_sheet_to_json_format(data)
+    return formatted_data[1:]
+
+
+def get_request_row_number_by_datetime(date_time: str) -> int:
+    """Получить номер строки заказа по дате и времени"""
+    all_requests = get_all_requests()
+    for idd, request in enumerate(all_requests, 3):
+        if request['Дата и время'] == date_time:
+            return idd
+
+
+def edit_request_state_to_canceled_by_datetime(date_time: str):
+    """Изменить статус заявки на Отменен по дате и времени"""
+    cell_id = get_request_row_number_by_datetime(date_time)
+    update_one_cell(config.REQUESTS, list_name='Все', cell_id=f'J{cell_id}', new_value='Отменен')
+
+
+def parse_datetime_on_message(message_text: str) -> str:
+    """Получить строку с датой и временем из сообщения"""
+    result = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}', message_text)
+    return result.group(0)
 
 
 # TIME ---------------------------------------------------------------------------------------------------------------
@@ -374,7 +425,7 @@ def get_shops_names_and_sum_in_text_format(data: list) -> str:
 
 # за все время
 
-def get_all_requests(data: list) -> list:
+def get_all_not_canceled_requests(data: list) -> list:
     """Получить все не отмененные заявки"""
     requests = []
     for request in data:
@@ -385,13 +436,13 @@ def get_all_requests(data: list) -> list:
 
 def get_all_requests_count(data: list) -> int:
     """Получить общее количество заявок"""
-    requests = get_all_requests(data)
+    requests = get_all_not_canceled_requests(data)
     return len(requests)
 
 
 def get_all_requests_total_sum(data: list) -> int:
     """Получить сумму со всех заявок"""
-    requests = get_all_requests(data)
+    requests = get_all_not_canceled_requests(data)
     count = 0
     for request in requests:
         count += int(request[6])
@@ -400,7 +451,7 @@ def get_all_requests_total_sum(data: list) -> int:
 
 def get_top_five_payable_shops_ever(data: list) -> str:
     """Получить топ 5 платежеспособных магазинов за все время"""
-    requests = get_all_requests(data)
+    requests = get_all_not_canceled_requests(data)
     payable_shops = get_top_five_payable_shops(requests)
     payable_shops_text_format = get_shops_names_and_sum_in_text_format(payable_shops)
     return payable_shops_text_format

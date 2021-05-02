@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+TEST_BOT_TOKEN = os.getenv('TEST_BOT_TOKEN')
+
 ADMINS_ID = [int(el) for el in os.getenv('ADMINS_ID').split(',')]
 
 TEST_TABLE = os.getenv('test_table_id')

@@ -1,4 +1,4 @@
-from bot import dp, bot, Request, RequestAdd, DeleteProduct, NewShop
+from bot import dp, bot, Request, RequestAdd, DeleteProduct, NewShop, CancelRequest
 from functions import *
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -15,6 +15,7 @@ async def cmd_set_commands(message: types.Message):
     user_id = message.from_user.id
     if user_id in config.ADMINS_ID:
         commands = [types.BotCommand(command="/new_request", description="Новая заявка"),
+                    types.BotCommand(command="/cancel_request", description="Отменить заявку"),
                     types.BotCommand(command="/add_new_shop", description="Добавить торговую точку"),
                     types.BotCommand(command="/statistics", description="Показать статистику")]
         await bot.set_my_commands(commands)
@@ -104,6 +105,36 @@ async def text_cancel_action(message: types.Message, state: FSMContext):
     edit_data_in_json_file(telegram_id, data)
     await message.answer('Действие отменено', reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
+
+
+@dp.message_handler(commands=["cancel_request"], state="*")
+async def command_cancel_request(message: types.Message, state: FSMContext):
+    telegram_id = message.from_user.id
+    employee = get_employee_by_id(telegram_id)
+    if employee:
+        try:
+            employee_requests = get_employee_requests(employee)
+            requests = get_accepted_requests(employee_requests)
+            shop_names_in_requests = get_datetime_and_shop_names_by_request(requests)
+            requests_keyboard = create_keyboard(shop_names_in_requests)
+            await message.answer('Какую заявку отменить?', reply_markup=requests_keyboard)
+            await CancelRequest.Cancel.set()
+            await state.update_data(shop_names_in_requests=shop_names_in_requests)
+        except:
+            await message.answer('Что то пошло не так, попробуйте позже!', reply_markup=types.ReplyKeyboardRemove())
+            await state.finish()
+
+
+@dp.message_handler(state=CancelRequest.Cancel, content_types=types.ContentTypes.TEXT)
+async def command_cancel_request_action(message: types.Message, state: FSMContext):
+    user_answer = message.text
+    data = await state.get_data()
+    shop_names_in_requests = data['shop_names_in_requests']
+    if user_answer in shop_names_in_requests:
+        request_datetime = parse_datetime_on_message(user_answer)
+        edit_request_state_to_canceled_by_datetime(request_datetime)
+        await message.answer(f"Заявка\n{user_answer}\nбыла Отменена!", reply_markup=types.ReplyKeyboardRemove())
+        await state.finish()
 
 
 @dp.message_handler(commands=["add_new_shop"], state="*")
@@ -311,7 +342,8 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
         product = data['product']
         if int(number_of_products) <= int(product['Количество']):
             product['Количество'] = int(number_of_products)
-            product['Сумма'] = product['Цена'] * product['Количество']
+            product_price = int(float(product['Цена'].replace(',', '.')))
+            product['Сумма'] = product_price * product['Количество']
             await state.update_data(product=product)
             order_data = {'employee': data['employee'], 'shop': data['shop'],
                           'orders': [product], 'total_sum': product['Сумма']}
@@ -323,7 +355,7 @@ async def command_request_action_five(message: types.Message, state: FSMContext)
             product_data = get_product_data_from_data(order_data)
             for product in product_data:
                 await message.answer('\n'.join(product))
-            await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
+            await message.answer(f'Общая сумма: {order_data["total_sum"]} тг')
             await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
             await state.finish()
         else:
@@ -398,7 +430,8 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
         product = data['product']
         if int(number_of_products) <= int(product['Количество']):
             product['Количество'] = int(number_of_products)
-            product['Сумма'] = product['Цена'] * product['Количество']
+            product_price = int(float(product['Цена'].replace(',', '.')))
+            product['Сумма'] = product_price * product['Количество']
             await state.update_data(product=product)
             telegram_id = message.from_user.id
             order_data = get_data_from_json_file(telegram_id)
@@ -417,7 +450,7 @@ async def command_request_add_action_three(message: types.Message, state: FSMCon
             product_data = get_product_data_from_data(order_data)
             for product in product_data:
                 await message.answer('\n'.join(product))
-            await message.answer(f'Общая сумма: {int(order_data["total_sum"])} тг')
+            await message.answer(f'Общая сумма: {order_data["total_sum"]} тг')
             await message.answer(f'Что дальше?', reply_markup=next_choice_buttons)
             await state.finish()
         else:

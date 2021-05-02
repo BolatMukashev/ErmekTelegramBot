@@ -7,8 +7,12 @@ import httplib2
 from apiclient import discovery
 import config
 
+DEBUG = True
 
-bot = Bot(token=config.BOT_TOKEN)
+if DEBUG:
+    bot = Bot(token=config.TEST_BOT_TOKEN)
+else:
+    bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
 
@@ -39,6 +43,10 @@ class NewShop(StatesGroup):
     PhoneNumber = State()
     SellerName = State()
     CashMachine = State()
+
+
+class CancelRequest(StatesGroup):
+    Cancel = State()
 
 
 # Авторизуемся и получаем service — экземпляр доступа к API
