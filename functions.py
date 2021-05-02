@@ -370,7 +370,7 @@ def edit_request_state_to_canceled_by_datetime(date_time: str):
 
 def parse_datetime_on_message(message_text: str) -> str:
     """Получить строку с датой и временем из сообщения"""
-    result = re.match(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}', message_text)
+    result = re.match(r'\d{2}\.\d{2}\.\d{4} \d{1,2}:\d{2}:\d{2}', message_text)
     return result.group(0)
 
 
