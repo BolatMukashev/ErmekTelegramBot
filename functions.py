@@ -214,7 +214,7 @@ def get_datetime_and_shop_names_by_request(requests: list) -> list:
     """Вернуть только дату/время и название заявок"""
     accepted_requests_names = []
     for request in requests:
-        request_datetime_and_name = f'{request["Дата и время"]} {request["Название"]}'
+        request_datetime_and_name = f'{request["Название"]} ({request["Дата и время"]})'
         accepted_requests_names.append(request_datetime_and_name)
     return accepted_requests_names
 

@@ -29,6 +29,7 @@ async def command_start(message: types.Message):
     await message.answer(f'Привет, {full_name}!\nТвой Telegram ID: {telegram_id}')
     await message.answer('Доступные команды:\n'
                          '/new_request - Новая заявка\n'
+                         '/cancel_request - Отменить заявку\n'
                          '/add_new_shop - Добавить торговую точку\n'
                          '/statistics - Показать статистику')
     if telegram_id in config.ADMINS_ID:
@@ -548,4 +549,9 @@ async def text_the_end(message: types.Message):
 
 @dp.message_handler()
 async def echo(message: types.Message):
-    await message.answer('ʕ ᵔᴥᵔ ʔ', reply_markup=types.ReplyKeyboardRemove())
+    await message.answer('ʕ ᵔᴥᵔ ʔ\n'
+                         'Доступные команды:\n'
+                         '/new_request - Новая заявка\n'
+                         '/cancel_request - Отменить заявку\n'
+                         '/add_new_shop - Добавить торговую точку\n'
+                         '/statistics - Показать статистику', reply_markup=types.ReplyKeyboardRemove())
