@@ -370,7 +370,7 @@ def edit_request_state_to_canceled_by_datetime(date_time: str):
 
 def parse_datetime_on_message(message_text: str) -> str:
     """Получить строку с датой и временем из сообщения"""
-    result = re.match(r'\d{2}\.\d{2}\.\d{4} \d{1,2}:\d{2}:\d{2}', message_text)
+    result = re.search(r'\d{2}\.\d{2}\.\d{4} \d{1,2}:\d{2}:\d{2}', message_text)
     return result.group(0)
 
 
@@ -429,7 +429,7 @@ def get_all_not_canceled_requests(data: list) -> list:
     """Получить все не отмененные заявки"""
     requests = []
     for request in data:
-        if request[9] != 'Отменен':
+        if request[9] != 'Отменен ✓':
             requests.append(request)
     return requests
 
@@ -463,7 +463,7 @@ def get_requests_today(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_today = []
     for request in data:
-        if request[9] != 'Отменен':
+        if request[9] != 'Отменен ✓':
             request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
             if request_date.strftime('%d.%m.%Y') == today.strftime('%d.%m.%Y'):
                 requests_today.append(request)
@@ -499,7 +499,7 @@ def get_requests_on_this_month(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_on_this_month = []
     for request in data:
-        if request[9] != 'Отменен':
+        if request[9] != 'Отменен ✓':
             request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
             if request_date.strftime('%m.%Y') == today.strftime('%m.%Y'):
                 requests_on_this_month.append(request)
@@ -537,7 +537,7 @@ def get_requests_on_previous_month(data: list) -> list:
     previous_month = first_day - timedelta(days=1)
     requests_on_previous_month = []
     for request in data:
-        if request[9] != 'Отменен':
+        if request[9] != 'Отменен ✓':
             request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
             if request_date.strftime('%m.%Y') == previous_month.strftime('%m.%Y'):
                 requests_on_previous_month.append(request)
@@ -573,7 +573,7 @@ def get_requests_on_this_year(data: list) -> list:
     today = time_in_uralsk_origin()
     requests_on_this_year = []
     for request in data:
-        if request[9] != 'Отменен':
+        if request[9] != 'Отменен ✓':
             request_date = datetime.strptime(request[1], '%d.%m.%Y %H:%M:%S')
             if request_date.strftime('%Y') == today.strftime('%Y'):
                 requests_on_this_year.append(request)
