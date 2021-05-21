@@ -262,7 +262,7 @@ def get_product_index(all_products: list, product_name: str) -> int:
 
 
 def convert_product_quantity_to_reserve(all_products: list, product_name: str, quantity: int):
-    """Убрать некое количество товара в резерв"""
+    """Убрать некое количество товара из Количества в Резерв"""
     product_index = get_product_index(all_products, product_name)
     product = get_product(all_products, product_name)
     update_one_cell(config.PRODUCTS, 'Лист1', f'F{product_index}', int(float(product['Количество'])) - quantity)

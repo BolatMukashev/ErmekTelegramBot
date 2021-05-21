@@ -8,7 +8,7 @@ from apiclient import discovery
 import config
 import os
 
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     bot = Bot(token=config.TEST_BOT_TOKEN)
